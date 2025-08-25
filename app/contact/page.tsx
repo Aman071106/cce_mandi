@@ -18,21 +18,13 @@ const ContactPage = () => {
 					className="md:col-span-2 xl:col-span-3 text-4xl md:text-6xl font-semibold tracking-tight text-center md:text-left">
 					SnTC Team
 				</div>
-				<ContactCard
-					name={"Vaibhav Kesharwani"}
-					phone={9369080567}
-					mail={"technical_secretary@students.iitmandi.ac.in"}
-				/>
+				
 				<ContactCard
 					name={"Aryan Singh"}
 					phone={6393051440}
 					mail={"b22260@students.iitmandi.ac.in"}
 				/>
-				<ContactCard
-					name={"Aritra Boral"}
-					phone={9433823273}
-					mail={"b22198@students.iitmandi.ac.in"}
-				/>
+				
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 px-12 pb-24">
 				<div
@@ -48,6 +40,11 @@ const ContactPage = () => {
 					name={"Vinamra Garg"}
 					mail={"b23302@students.iitmandi.ac.in"}
 					phone={9350555053}
+				/>
+				<ContactCard
+					name={"Aman Gupta"}
+					mail={"b24107@students.iitmandi.ac.in"}
+					phone={7597759385}
 				/>
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 px-12 pb-24">

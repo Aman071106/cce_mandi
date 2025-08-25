@@ -16,7 +16,7 @@ const Footer = () => {
           Empowering tech-advancement through innovation and discovery
         </div>
         <div className="mt-12 text-zinc-500 text-sm block md:hidden">
-          Copyright © 2024, SnTC, IIT Mandi.
+          Copyright © 2025, SnTC, IIT Mandi.
         </div>
       </div>
       <div className=" m-12 text-zinc-100 w-2/3 relative hidden md:block">
@@ -35,15 +35,15 @@ const Footer = () => {
             <Mail />
           </Link>
           <Link
-            href={"https://www.linkedin.com/in/born-engineer73/"}
+            href={"https://www.linkedin.com/in/aryan0singh/"}
             target="_blank"
           >
             <Linkedin />
           </Link>
-          <Github />
+          
         </div>
         <div className="absolute bottom-0 left-0 text-sm text-zinc-500">
-          Copyright © 2024, SnTC, IIT Mandi.
+          Copyright © 2025, SnTC, IIT Mandi.
         </div>
       </div>
     </div>
