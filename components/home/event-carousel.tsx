@@ -61,7 +61,7 @@ const EventCarousel = () => {
                   styles.carouselItem
                 }
                 style={{
-                  background: "url(" + data.img + ")",
+                  background: `url("${encodeURI(data.img)}")`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}
