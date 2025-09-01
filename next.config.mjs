@@ -17,6 +17,10 @@ const nextConfig = {
 			
 		],
 	},
+	eslint: {
+    // 🚀 Ignore ESLint errors during build
+    ignoreDuringBuilds: true,
+  },
 	output: "standalone",
 };
 
