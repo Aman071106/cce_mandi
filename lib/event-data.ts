@@ -2,7 +2,7 @@ export const eventData = [
   {
     id: "MQDJ5oYBxosaXBeJu2LT",
     name: "Basics of Programming",
-    img: "https://res.cloudinary.com/div0ryscl/image/upload/v1721296763/goran-ivos-iOykDIkZLQw-unsplash_kxxmth_cfpu2v.webp",
+    img: "https://ik.imagekit.io/mpg84lwv4/bop",
     date: "3 Sept '24",
     time: "6pm to 8pm",
     location: "A18-1A",
@@ -18,7 +18,7 @@ export const eventData = [
   {
     id: "neKqtIjqUhc0QeHrpxek",
     name: "MCU and Sensors",
-    img: "https://res.cloudinary.com/div0ryscl/image/upload/v1721296779/WhatsApp_Image_2024-07-13_at_00_c0q100.webp",
+    img: "https://ik.imagekit.io/mpg84lwv4/mcu_s.png",
     date: "6 Sept '25",
     time: "6pm to 8pm",
     location: "A18-1A",
@@ -34,7 +34,7 @@ export const eventData = [
   {
     id: "DYT3hZXSs38QGrCqEno9",
     name: "Profile Management and Intro to IIT Mandi Labs",
-    img: "https://res.cloudinary.com/div0ryscl/image/upload/v1721296785/carl-heyerdahl-KE0nC8-58MQ-unsplash_rozruo_mk487f.webp",
+    img: "https://ik.imagekit.io/mpg84lwv4/p_m.png",
     date: "8 Sept '25",
     time: "6pm to 8pm",
     location: "A18-1A",
@@ -50,7 +50,7 @@ export const eventData = [
   {
     id: "X5MACE2nBwTgLQWp5p0k",
     name: "SolidWorks and 3D Printing",
-    img: "https://res.cloudinary.com/div0ryscl/image/upload/v1721296791/kadir-celep-NwOeoxUY_p0-unsplash_1_jxujo6_kyg07r.webp",
+    img: "https://ik.imagekit.io/mpg84lwv4/image(2).png",
     date: "7 Sept '25",
     time: "6pm to 8pm",
     location: "A18-1A",
@@ -67,7 +67,7 @@ export const eventData = [
   {
     id: "Y9IHnTEHTVhYNDvh7Gpu",
     name: "Intro to Git/GitHub",
-    img: "https://res.cloudinary.com/div0ryscl/image/upload/v1721296803/praveen-thirumurugan-KPAQpJYzH0Y-unsplash_n15amq_zzoggz.webp",
+    img: "https://ik.imagekit.io/mpg84lwv4/image(4).png",
     date: "4 Sept '25",
     time: "6pm to 8pm",
     location: "A18-1A",
