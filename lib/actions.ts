@@ -75,20 +75,20 @@ export const registerUserInMailingList = async (
 
   // Send confirmation email
   try {
-    await emailjs.send(
-      process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
-      process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
-      {
-        to_email: userData.email,
-        to_name: userData.displayName || "Participant",
-        event_name: eventName,
-      },
-      process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!,
-    );
-    toast.success(`Confirmation email sent for ${eventName}`);
+    // await emailjs.send(
+    //   process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+    //   process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
+    //   {
+    //     to_email: userData.email,
+    //     to_name: userData.displayName || "Participant",
+    //     event_name: eventName,
+    //   },
+    //   process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!,
+    // );
+    // toast.success(`Confirmation email sent for ${eventName}`);
   } catch (error) {
-    console.error("Error sending email:", error);
-    toast.error("Could not send confirmation email");
+    // console.error("Error sending email:", error);
+    // toast.error("Could not send confirmation email");
   }
 };
 

@@ -3,7 +3,7 @@ export const eventData = [
     id: "MQDJ5oYBxosaXBeJu2LT",
     name: "Basics of Programming",
     img: "https://ik.imagekit.io/mpg84lwv4/bop",
-    date: "3 Sept '24",
+    date: "3 Sept '25",
     time: "6pm to 8pm",
     location: "A18-1A",
     desc: "Call those logical brain cells of yours to work in the programming fundamentals session. Have a sneak peak at what’s in for you: We'll explore the basics: the concept and goals of programming, variables (like data containers), different data types (think numbers and words), and control structures (the rules that guide programs). We'll dive into Python (friendly and versatile) and C++ (powerful and fast) to explore their syntax, and compare the two languages on various grounds, including their use cases. Plus, we'll set up Arduino IDE for hands-on learning in the upcoming sessions. Don't worry if it's new—programming is all about learning by doing! Let's make coding fun and accessible together.",
