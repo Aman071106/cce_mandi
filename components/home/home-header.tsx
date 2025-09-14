@@ -37,7 +37,7 @@ const HomeHeader: React.FC = () => {
         setCurrentUserID(user.uid);
         await createUserDoc(user);
         await setUserCookie(user.uid);
-        toast.success("Signed in successfully!- home");
+        toast.success("Signed in successfully!");
         router.push("/profile");
       } else {
         toast.error("Please login with your institute ID.");

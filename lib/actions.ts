@@ -111,27 +111,27 @@ export const fetchPendingUsers = async () => {
 export const approveUser = async (userID: string) => {
   const userRef = doc(db, "users", userID);
   await updateDoc(userRef, { status: "approved" });
-  toast.success("User approved!");
+  // toast.success("User approved!");
 };
 
 // Reject user
 export const rejectUser = async (userID: string) => {
   const userRef = doc(db, "users", userID);
   await updateDoc(userRef, { status: "rejected" });
-  toast.success("User rejected!");
+  // toast.success("User rejected!");
 };
 
 // Delete user
 export const deleteUser = async (userID: string) => {
   await deleteDoc(doc(db, "users", userID));
-  toast.success("User deleted!");
+  // toast.success("User deleted!");
 };
 
 // Add a new course
 export const addCourse = async (courseCode: string, courseName: string) => {
   const courseRef = doc(db, "courses", courseCode);
   await setDoc(courseRef, { courseName, enrolledEmails: [] });
-  toast.success("Course added!");
+  // toast.success("Course added!");
 };
 
 // Register user email to course

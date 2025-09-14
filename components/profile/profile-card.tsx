@@ -64,7 +64,7 @@ useEffect(() => {
       setUserData(editableData);
       setIsEditing(false);
       setActiveSection(null);
-      toast.success("Profile updated successfully!");
+      // toast.success("Profile updated successfully!");
     } catch (error) {
       toast.error("Failed to update profile");
     }
