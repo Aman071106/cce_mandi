@@ -20,23 +20,24 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <UserProvider>
-        <body className={jost.className}>
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              className: "",
-              style: {
-                fontSize: "20px",
-                padding: "10px 20px",
-              },
-            }}
-          />
+      <body className={jost.className}>
+        {/*  Keep Toaster outside of context/provider */}
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            className: "",
+            style: {
+              fontSize: "20px",
+              padding: "10px 20px",
+            },
+          }}
+        />
+        <UserProvider>
           <div className="w-full h-16 sm:h-20 fixed top-0 z-50">
             <Navbar />
           </div>
@@ -44,8 +45,8 @@ export default function RootLayout({
           <div className="w-full">
             <Footer />
           </div>
-        </body>
-      </UserProvider>
+        </UserProvider>
+      </body>
     </html>
   );
 }

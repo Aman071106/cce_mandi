@@ -1,49 +1,58 @@
 import React from "react";
 import sntcLogo from "@/public/sntc.png";
 import Image from "next/image";
-import { Github, Linkedin, Mail } from "lucide-react";
+import { Linkedin, Mail } from "lucide-react";
 import Link from "next/link";
 
 const Footer = () => {
   return (
-    <div className="w-full flex gap-0 bg-zinc-900">
-      <div className="bg-zinc-900 md:bg-zinc-100 w-full md:w-1/3 p-12 flex flex-col items-center md:items-start">
-        <Image src={sntcLogo} alt="sntc logo" width={200} />
-        <div className="text-xl md:text-2xl text-zinc-100 md:text-zinc-900 font-medium">
-          Presented by SnTC, IIT Mandi
+    <div className="w-full flex flex-col md:flex-row gap-0 bg-gray-50 border-t border-gray-200">
+      {/* Left Section */}
+      <div className="bg-gray-50 w-full md:w-1/3 p-12 flex flex-col items-center md:items-start">
+        <Image src={sntcLogo} alt="sntc logo" width={180} className="mb-4" />
+        <div className="text-xl md:text-2xl text-gray-900 font-semibold">
+          Presented by IIT Mandi
         </div>
-        <div className="text-zinc-500 text-center md:text-left">
-          Empowering tech-advancement through innovation and discovery
+        <div className="text-gray-600 text-center md:text-left mt-2">
+          Empowering education through innovation and research.
         </div>
-        <div className="mt-12 text-zinc-500 text-sm block md:hidden">
-          Copyright © 2025, SnTC, IIT Mandi.
+        <div className="mt-10 text-gray-500 text-sm block md:hidden">
+          © 2025, CCE, IIT Mandi.
         </div>
       </div>
-      <div className=" m-12 text-zinc-100 w-2/3 relative hidden md:block">
-        <div className="text-xl md:text-2xl text-zinc-100 font-medium">
-          About TIP
+
+      {/* Right Section */}
+      <div className="m-12 text-gray-900 w-full md:w-2/3 relative hidden md:block">
+        <div className="text-xl md:text-2xl font-semibold mb-3">
+          About CCE
         </div>
-        <div className="text-zinc-500 max-w-screen-lg mb-12">
-          The Technical Induction Program is aimed at introducing the
-          participants with key technical skills and tools, providing them with
-          guidance and support by laying a solid foundation in top tech
-          competencies to ensure a seamless transition from school to a
-          professional tech-environment.
+        <div className="text-gray-600 max-w-screen-lg mb-10 leading-relaxed">
+          CCE IIT Mandi provides learners with a platform to study and gain
+          exposure at IIT Mandi through outreach programs and delivers
+          accessible, high-quality continuing education that equips learners
+          with skills, knowledge, and opportunities for lifelong growth.
         </div>
-        <div className="flex gap-2.5">
-          <Link href={"mailto:technical_secretary@students.iitmandi.ac.in"}>
-            <Mail />
+
+        {/* Social Links */}
+        <div className="flex gap-3 mb-6">
+          <Link
+            href="mailto:cceoffice@iitmandi.ac.in"
+            className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition"
+          >
+            <Mail className="text-gray-700" />
           </Link>
           <Link
-            href={"https://www.linkedin.com/in/aryan0singh/"}
+            href="https://www.linkedin.com/company/cce-iitmandi/"
             target="_blank"
+            className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition"
           >
-            <Linkedin />
+            <Linkedin className="text-gray-700" />
           </Link>
-          
         </div>
-        <div className="absolute bottom-0 left-0 text-sm text-zinc-500">
-          Copyright © 2025, SnTC, IIT Mandi.
+
+        {/* Copyright */}
+        <div className="absolute bottom-0 left-0 text-sm text-gray-500">
+          © 2025, CCE, IIT Mandi. All rights reserved.
         </div>
       </div>
     </div>

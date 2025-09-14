@@ -1,96 +1,213 @@
 "use client";
 
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import Image from "next/image";
 import sntcLogo from "@/public/sntc.png";
 import Button from "@/components/button/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, LayoutDashboard, LogOut } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signInWithGooglePopup } from "@/firebase/firebase";
+import { useRouter, usePathname } from "next/navigation";
+import { signInWithGooglePopup, signOutUser } from "@/firebase/firebase";
 import { UserContext } from "@/context/user-context";
-import { createUserDoc } from "@/lib/actions";
+import { createUserDoc, getUserDoc } from "@/lib/actions";
 import toast from "react-hot-toast";
 import { setUserCookie } from "@/lib/server-actions";
-
+const adminEmail="aman07112006@gmail.com"
 const Navbar = () => {
   const [toggle, setToggle] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { currentUserID, setCurrentUserID } = useContext(UserContext);
   const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (currentUserID) {
+        try {
+          const userData = await getUserDoc(currentUserID);
+          const email = userData.connectionDetails?.emailAddress;
+          setUserEmail(email);
+          setIsAdmin(email === adminEmail);
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      }
+    };
+
+    checkAdminStatus();
+  }, [currentUserID]);
 
   const loginUser = async () => {
     try {
       const { user } = await signInWithGooglePopup();
-      if (user.email && /iitmandi.ac.in/.test(user.email)) {
+      if (user.email) {
         setCurrentUserID(user.uid);
         await createUserDoc(user);
         await setUserCookie(user.uid);
+        setUserEmail(user.email);
+        setIsAdmin(user.email === adminEmail);
         toast.success("Signed in successfully!");
         router.push("/profile");
-      } else {
-        toast.error("Please login with your institute ID.");
-        router.push("/");
       }
     } catch (e) {
       toast.error("Error signing in. More info in console");
-      router.push("/");
       console.log(e);
     }
   };
 
+  const logoutUser = async () => {
+    try {
+      await signOutUser();
+      setCurrentUserID(null);
+      
+      setUserEmail(null);
+      setIsAdmin(false);
+      toast.success("Signed out successfully!");
+      router.push("/");
+    } catch (e) {
+      toast.error("Error signing out");
+      console.log(e);
+    }
+  };
+
+  const isActiveLink = (path: string) => {
+    return pathname === path ? "text-slate-800 font-semibold" : "text-slate-600 hover:text-slate-800";
+  };
+
   return (
     <>
-      <div className="w-full bg-zinc-100 h-full px-5 sm:px-12 py-2.5 flex flex-row justify-between items-center border-b-2">
-        <Image
-          src={sntcLogo}
-          alt="SnTC logo"
-          className="w-[40px] sm:w-[60px] aspect-square"
-        />
-        <div className="hidden sm:flex gap-5 items-center text-base leading-normal font-medium uppercase">
-          <Link href={"/"}>Home</Link>
-          <Link href={"/events"}>Events</Link>
-          <Link href={"/contact"}>contact</Link>
-          {currentUserID ? (
-            <Link href={"/profile"}>
-              <Button>Profile</Button>
+      <nav className="w-full bg-white h-full px-5 sm:px-8 py-3 flex flex-row justify-between items-center border-b border-gray-200 shadow-sm">
+        <div className="flex items-center gap-8">
+          <Link href="/" className="flex items-center">
+           <Image
+  src={sntcLogo}
+  alt="SnTC logo"
+  className="h-12 xs:h-16 sm:h-20 md:h-24 lg:h-28 w-auto object-contain"
+/>
+
+
+
+          </Link>
+          
+          <div className="hidden md:flex gap-6 items-center text-xl font-medium text-slate-700">
+            <Link href="/" className={`transition-colors ${isActiveLink("/")}`}>
+              Home
             </Link>
+            
+            <Link href="/contact" className={`transition-colors ${isActiveLink("/contact")}`}>
+              Contact
+            </Link>
+            {/* {isAdmin && (
+              // <Link href="/dashboard" className={`transition-colors ${isActiveLink("/dashboard")}`}>
+              //   Dashboard
+              // </Link>
+            )} */}
+          </div>
+        </div>
+
+        <div className="hidden md:flex items-center gap-4">
+          {currentUserID ? (
+            <div className="flex items-center gap-4">
+              <Link href="/profile">
+                <Button variant="outline" className="flex items-center gap-2 py-2 px-4">
+                  <User size={16} />
+                  Profile
+                </Button>
+              </Link>
+              {isAdmin && (
+                <Link href="/dashboardAdmin">
+                  <Button className="flex items-center gap-2 py-2 px-4 bg-slate-800 hover:bg-slate-900">
+                    <LayoutDashboard size={16} />
+                    Admin Dashboard
+                  </Button>
+                </Link>
+              )}
+              <button
+                onClick={logoutUser}
+                className="text-slate-600 hover:text-slate-800 transition-colors flex items-center gap-1 text-sm"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
           ) : (
-            <Button onClick={loginUser}>Login</Button>
+            <Button onClick={loginUser} className="py-2 px-4">
+              Login
+            </Button>
           )}
         </div>
-        <div
-          className="inline sm:hidden pointer"
-          onClick={() => setToggle(!toggle)}
-        >
-          {toggle ? <X size={36} /> : <Menu size={36} />}
+
+        <div className="md:hidden">
+          <button
+            onClick={() => setToggle(!toggle)}
+            className="p-2 rounded-md text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            {toggle ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
-      </div>
+      </nav>
+
+      {/* Mobile menu */}
       <div
-        className={`${toggle ? "flex" : "hidden"} bg-zinc-100 w-full p-5 sm:hidden flex-col gap-5 text-base leading-normal font-medium uppercase border-b-2`}
+        className={`${toggle ? "flex" : "hidden"} md:hidden bg-white w-full p-5 flex-col gap-4 text-base font-medium border-b border-gray-200 shadow-sm`}
       >
-        <Link href={"/"} onClick={() => setToggle(false)}>
+        <Link 
+          href="/" 
+          className={`py-2 transition-colors ${isActiveLink("/")}`}
+          onClick={() => setToggle(false)}
+        >
           Home
         </Link>
-        <Link href={"/events"} onClick={() => setToggle(false)}>
-          Events
+       
+        <Link 
+          href="/contact" 
+          className={`py-2 transition-colors ${isActiveLink("/contact")}`}
+          onClick={() => setToggle(false)}
+        >
+          Contact
         </Link>
-        <Link href={"/contact"} onClick={() => setToggle(false)}>
-          contact
-        </Link>
-        {currentUserID ? (
-          <Link href={"/profile"} onClick={() => setToggle(false)}>
-            profile
+        
+        {isAdmin && (
+          <Link 
+            href="/dashboardAdmin" 
+            className={`py-2 transition-colors ${isActiveLink("/dashboard")}`}
+            onClick={() => setToggle(false)}
+          >
+            Dashboard
           </Link>
+        )}
+        
+        {currentUserID ? (
+          <>
+            <Link 
+              href="/profile" 
+              className={`py-2 transition-colors ${isActiveLink("/profile")}`}
+              onClick={() => setToggle(false)}
+            >
+              Profile
+            </Link>
+            <button
+              onClick={async () => {
+                await logoutUser();
+                setToggle(false);
+              }}
+              className="text-left py-2 text-slate-600 hover:text-slate-800 transition-colors flex items-center gap-2"
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+          </>
         ) : (
-          <div
-            className="cursor-pointer"
+          <button
             onClick={async () => {
               await loginUser();
               setToggle(false);
             }}
+            className="text-left py-2 text-slate-600 hover:text-slate-800 transition-colors"
           >
             Login
-          </div>
+          </button>
         )}
       </div>
     </>

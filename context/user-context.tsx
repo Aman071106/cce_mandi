@@ -22,9 +22,10 @@ const UserProvider = ({ children }: Props) => {
   useEffect(() => {
     (async () => {
       const userData = await getUserCookie();
+      
       if (userData) {
         setCurrentUserID(userData.value);
-        toast.success("Welcome back!");
+        // toast.success("Welcome back!- debug");
       }
     })();
   }, []);

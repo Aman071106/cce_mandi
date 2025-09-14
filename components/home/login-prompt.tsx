@@ -19,46 +19,38 @@ const LoginPrompt = () => {
   const loginUser = async () => {
     try {
       const { user } = await signInWithGooglePopup();
-      if (user.email && /iitmandi.ac.in/.test(user.email)) {
+      if (user.email) {
         setCurrentUserID(user.uid);
         await createUserDoc(user);
         await setUserCookie(user.uid);
         toast.success("Signed in successfully!");
         router.push("/profile");
-      } else {
-        toast.error("Please login with your institute ID.");
-        router.push("/");
       }
     } catch (e) {
-      toast.error("Error signing in. More info in console");
-      router.push("/");
-      console.log(e);
+      toast.error("Error signing in. Check console.");
+      console.error(e);
     }
   };
 
   return (
-    <div className="px-12 py-24 flex flex-col md:items-start items-center">
-      <div className="text-center md:text-left text-4xl md:text-6xl font-semibold tracking-tight md:leading-normal bg-gradient-to-br from-pink-500 to-amber-500 inline-block text-transparent bg-clip-text">
-        Login to register for events
-      </div>
-      <div className="text-center md:text-left text-xl md:text-2xl text-zinc-500 font-medium mb-12 max-w-screen-sm">
-        Registration on the website is mandatory to attend any event under the
-        Technical Induction Program.
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-2.5">
+    <div className="px-6 md:px-12 py-24 flex flex-col items-center md:items-start text-center md:text-left">
+      <h1 className="text-4xl md:text-6xl font-semibold tracking-tight mb-6 text-slate-900">
+        Welcome! Please login to continue
+      </h1>
+      <p className="text-lg md:text-xl text-gray-500 mb-12 max-w-screen-sm">
+        Access your profile and manage your registrations easily.
+      </p>
+      <div className="flex flex-col sm:flex-row items-center gap-4">
         {!currentUserID ? (
-          <Button variant="black" onClick={loginUser}>
-            <Image src={GoogleLogo} alt={"Google logo"} width={24} />
-            login with google
+          <Button variant="black" onClick={loginUser} className="flex items-center gap-2">
+            <Image src={GoogleLogo} alt="Google logo" width={24} />
+            Login with Google
           </Button>
         ) : (
-          <Button variant="black">
-            <Link href={"/profile"}>Go to Profile</Link>
-          </Button>
+          <Link href="/profile">
+            <Button variant="black">Go to Profile</Button>
+          </Link>
         )}
-        <Link href={"/events"}>
-          <Button variant="outline">browse events</Button>
-        </Link>
       </div>
     </div>
   );
