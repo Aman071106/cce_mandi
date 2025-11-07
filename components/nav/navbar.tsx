@@ -4,19 +4,23 @@ import React, { useContext, useState, useEffect } from "react";
 import Image from "next/image";
 import sntcLogo from "@/public/sntc.png";
 import Button from "@/components/button/button";
-import { Menu, X, User, LayoutDashboard, LogOut } from "lucide-react";
+import { Menu, X, User, LayoutDashboard, LogOut, Bell, Plus, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { signInWithGooglePopup, signOutUser } from "@/firebase/firebase";
 import { UserContext } from "@/context/user-context";
-import { createUserDoc, getUserDoc } from "@/lib/actions";
+import { createUserDoc, getUserDoc, fetchNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/lib/actions";
 import toast from "react-hot-toast";
 import { setUserCookie } from "@/lib/server-actions";
-const adminEmail="aman07112006@gmail.com"
+
+const adminEmail = "aman07112006@gmail.com";
+
 const Navbar = () => {
   const [toggle, setToggle] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const { currentUserID, setCurrentUserID } = useContext(UserContext);
   const router = useRouter();
   const pathname = usePathname();
@@ -36,6 +40,27 @@ const Navbar = () => {
     };
 
     checkAdminStatus();
+  }, [currentUserID]);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (currentUserID) {
+        try { 
+          const generalNotifications = await fetchNotifications();
+          const allNotifications = [...generalNotifications];
+          setNotifications(allNotifications);
+        } catch (error) {
+          console.error("Error loading notifications:", error);
+        }
+      }
+    };
+
+    loadNotifications();
+    
+    // Set up real-time updates (you can implement this with onSnapshot)
+    const interval = setInterval(loadNotifications, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(interval);
   }, [currentUserID]);
 
   const loginUser = async () => {
@@ -60,9 +85,9 @@ const Navbar = () => {
     try {
       await signOutUser();
       setCurrentUserID(null);
-      
       setUserEmail(null);
       setIsAdmin(false);
+      setNotifications([]);
       toast.success("Signed out successfully!");
       router.push("/");
     } catch (e) {
@@ -70,6 +95,30 @@ const Navbar = () => {
       console.log(e);
     }
   };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead(currentUserID!);
+      setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+      setShowNotifications(false);
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+    }
+  };
+
+  const handleNotificationClick = async (notification: any) => {
+    await markNotificationAsRead(notification.id);
+    setNotifications(prev => prev.map(notif => 
+      notif.id === notification.id ? { ...notif, read: true } : notif
+    ));
+    
+    if (notification.linkId && notification.type === "forum") {
+      router.push(`/forum#post-${notification.linkId}`);
+    }
+    setShowNotifications(false);
+  };
+
+  const unreadCount = notifications.filter(notif => !notif.read).length;
 
   const isActiveLink = (path: string) => {
     return pathname === path ? "text-slate-800 font-semibold" : "text-slate-600 hover:text-slate-800";
@@ -80,41 +129,117 @@ const Navbar = () => {
       <nav className="w-full bg-white h-full px-5 sm:px-8 py-3 flex flex-row justify-between items-center border-b border-gray-200 shadow-sm">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center">
-           <Image
-  src={sntcLogo}
-  alt="SnTC logo"
-  className="h-12 xs:h-16 sm:h-20 md:h-24 lg:h-28 w-auto object-contain"
-/>
-
-
-
+            <Image
+              src={sntcLogo}
+              alt="SnTC logo"
+              className="h-12 xs:h-16 sm:h-20 md:h-24 lg:h-28 w-auto object-contain"
+            />
           </Link>
           
           <div className="hidden md:flex gap-6 items-center text-xl font-medium text-slate-700">
             <Link href="/" className={`transition-colors ${isActiveLink("/")}`}>
               Home
             </Link>
-            
+            <Link href="/forum" className={`transition-colors ${isActiveLink("/forum")}`}>
+              Forum
+            </Link>
             <Link href="/contact" className={`transition-colors ${isActiveLink("/contact")}`}>
               Contact
             </Link>
-            {/* {isAdmin && (
-              // <Link href="/dashboard" className={`transition-colors ${isActiveLink("/dashboard")}`}>
-              //   Dashboard
-              // </Link>
-            )} */}
+            <Link href="/fellows" className={`transition-colors ${isActiveLink("/fellows")}`}>
+              Fellows
+            </Link>
           </div>
         </div>
 
         <div className="hidden md:flex items-center gap-4">
           {currentUserID ? (
             <div className="flex items-center gap-4">
+              {/* Notifications Bell */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 rounded-md text-slate-600 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                    <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                      <h3 className="font-semibold text-gray-800">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllAsRead}
+                          className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+                    
+                    {notifications.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500">
+                        No notifications
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-100">
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            onClick={() => handleNotificationClick(notification)}
+                            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                              !notification.read ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <MessageSquare size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-800 text-sm">
+                                  {notification.title}
+                                </p>
+                                <p className="text-gray-600 text-sm mt-1">
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-2">
+                                  {notification.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}
+                                </p>
+                              </div>
+                              {!notification.read && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Create Post Button (Admin only) */}
+              {isAdmin && (
+                <Link href="/forum/create">
+                  <Button className="flex items-center gap-2 py-2 px-4 bg-green-600 hover:bg-green-700">
+                    <Plus size={16} />
+                    Create Post
+                  </Button>
+                </Link>
+              )}
+
               <Link href="/profile">
                 <Button variant="outline" className="flex items-center gap-2 py-2 px-4">
                   <User size={16} />
                   Profile
                 </Button>
               </Link>
+              
               {isAdmin && (
                 <Link href="/dashboardAdmin">
                   <Button className="flex items-center gap-2 py-2 px-4 bg-slate-800 hover:bg-slate-900">
@@ -123,6 +248,7 @@ const Navbar = () => {
                   </Button>
                 </Link>
               )}
+              
               <button
                 onClick={logoutUser}
                 className="text-slate-600 hover:text-slate-800 transition-colors flex items-center gap-1 text-sm"
@@ -138,7 +264,33 @@ const Navbar = () => {
           )}
         </div>
 
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center gap-2">
+          {currentUserID && (
+            <>
+              {/* Mobile Notifications Bell */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 rounded-md text-slate-600 hover:text-slate-800 transition-colors"
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Create Post Button for Mobile (Admin only) */}
+              {isAdmin && (
+                <Link href="/forum/create" className="p-2 rounded-md text-green-600 hover:text-green-800 transition-colors">
+                  <Plus size={20} />
+                </Link>
+              )}
+            </>
+          )}
+          
           <button
             onClick={() => setToggle(!toggle)}
             className="p-2 rounded-md text-slate-700 hover:bg-slate-100 transition-colors"
@@ -159,6 +311,14 @@ const Navbar = () => {
         >
           Home
         </Link>
+        
+        <Link 
+          href="/forum" 
+          className={`py-2 transition-colors ${isActiveLink("/forum")}`}
+          onClick={() => setToggle(false)}
+        >
+          Forum
+        </Link>
        
         <Link 
           href="/contact" 
@@ -166,6 +326,14 @@ const Navbar = () => {
           onClick={() => setToggle(false)}
         >
           Contact
+        </Link>
+        
+        <Link 
+          href="/fellows" 
+          className={`py-2 transition-colors ${isActiveLink("/fellows")}`}
+          onClick={() => setToggle(false)}
+        >
+          Fellows
         </Link>
         
         {isAdmin && (
@@ -210,6 +378,61 @@ const Navbar = () => {
           </button>
         )}
       </div>
+
+      {/* Mobile Notifications Panel */}
+      {showNotifications && (
+        <div className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowNotifications(false)}>
+          <div className="absolute top-16 right-0 left-0 bg-white rounded-b-lg shadow-lg max-h-80 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="font-semibold text-gray-800">Notifications</h3>
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Mark all as read
+                </button>
+              )}
+            </div>
+            
+            {notifications.length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                No notifications
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      !notification.read ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <MessageSquare size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-800 text-sm">
+                          {notification.title}
+                        </p>
+                        <p className="text-gray-600 text-sm mt-1">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-2">
+                          {notification.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}
+                        </p>
+                      </div>
+                      {!notification.read && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 };
