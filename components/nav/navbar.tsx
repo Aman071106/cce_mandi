@@ -46,9 +46,8 @@ const Navbar = () => {
     const loadNotifications = async () => {
       if (currentUserID) {
         try { 
-          const generalNotifications = await fetchNotifications();
-          const allNotifications = [...generalNotifications];
-          setNotifications(allNotifications);
+          const userNotifications = await fetchNotifications(currentUserID);
+          setNotifications(userNotifications);
         } catch (error) {
           console.error("Error loading notifications:", error);
         }
@@ -57,8 +56,8 @@ const Navbar = () => {
 
     loadNotifications();
     
-    // Set up real-time updates (you can implement this with onSnapshot)
-    const interval = setInterval(loadNotifications, 30000); // Refresh every 30 seconds
+    // Set up real-time updates
+    const interval = setInterval(loadNotifications, 30000);
     
     return () => clearInterval(interval);
   }, [currentUserID]);
@@ -97,12 +96,14 @@ const Navbar = () => {
   };
 
   const handleMarkAllAsRead = async () => {
-    try {
-      await markAllNotificationsAsRead(currentUserID!);
-      setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
-      setShowNotifications(false);
-    } catch (error) {
-      console.error("Error marking notifications as read:", error);
+    if (currentUserID) {
+      try {
+        await markAllNotificationsAsRead(currentUserID);
+        setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+        setShowNotifications(false);
+      } catch (error) {
+        console.error("Error marking notifications as read:", error);
+      }
     }
   };
 

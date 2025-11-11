@@ -1,20 +1,62 @@
 "use client";
 
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createForumPost } from "@/lib/actions";
 import { UserContext } from "@/context/user-context";
 import { getUserDoc } from "@/lib/actions";
 import toast from "react-hot-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 
 const CreatePostPage = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [relevantLinks, setRelevantLinks] = useState<string[]>([""]);
   const [loading, setLoading] = useState(false);
   const { currentUserID } = useContext(UserContext);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (currentUserID) {
+        try {
+          const userData = await getUserDoc(currentUserID);
+          const adminEmail = "aman07112006@gmail.com";
+          if (userData.connectionDetails?.emailAddress === adminEmail) {
+            setIsAdmin(true);
+          } else {
+            toast.error("Only admin can create posts");
+            router.push("/forum");
+          }
+        } catch (error) {
+          console.error(error);
+          router.push("/forum");
+        }
+      } else {
+        router.push("/");
+      }
+    };
+
+    checkAdmin();
+  }, [currentUserID, router]);
+
+  const addLink = () => {
+    setRelevantLinks([...relevantLinks, ""]);
+  };
+
+  const removeLink = (index: number) => {
+    const newLinks = [...relevantLinks];
+    newLinks.splice(index, 1);
+    setRelevantLinks(newLinks);
+  };
+
+  const updateLink = (index: number, value: string) => {
+    const newLinks = [...relevantLinks];
+    newLinks[index] = value;
+    setRelevantLinks(newLinks);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,13 +71,16 @@ const CreatePostPage = () => {
       return;
     }
 
+    // Filter out empty links
+    const filteredLinks = relevantLinks.filter(link => link.trim() !== "");
+
     setLoading(true);
     try {
       const userData = await getUserDoc(currentUserID);
       const userName = userData.personalDetails?.fullName || "Admin";
       const userEmail = userData.connectionDetails?.emailAddress || "";
 
-      await createForumPost(title, content, currentUserID, userName, userEmail);
+      await createForumPost(title, content, filteredLinks, currentUserID, userName, userEmail);
       toast.success("Post created successfully!");
       router.push("/forum");
     } catch (error) {
@@ -45,6 +90,19 @@ const CreatePostPage = () => {
       setLoading(false);
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 mt-10 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200 text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+            <p className="text-gray-600">Only admin can create forum posts.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 mt-10 px-4 sm:px-6 lg:px-8">
@@ -90,6 +148,47 @@ const CreatePostPage = () => {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent resize-none"
                 required
               />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Relevant Links
+                </label>
+                <button
+                  type="button"
+                  onClick={addLink}
+                  className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-800"
+                >
+                  <Plus size={16} />
+                  Add Link
+                </button>
+              </div>
+              <div className="space-y-2">
+                {relevantLinks.map((link, index) => (
+                  <div key={index} className="flex gap-2">
+                    <div className="flex-1 flex items-center gap-2">
+                      <LinkIcon size={16} className="text-gray-400" />
+                      <input
+                        type="url"
+                        value={link}
+                        onChange={(e) => updateLink(index, e.target.value)}
+                        placeholder="https://example.com"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                      />
+                    </div>
+                    {relevantLinks.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeLink(index)}
+                        className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <Minus size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="flex gap-4">

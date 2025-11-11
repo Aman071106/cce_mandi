@@ -3,53 +3,55 @@
 import React, { useContext, useEffect, useState } from "react";
 import { UserContext } from "@/context/user-context";
 import { useRouter } from "next/navigation";
-import { getUserDoc, updateUserDoc,fetchCourses,registerCourse } from "@/lib/actions";
+import { getUserDoc, updateUserDoc, fetchCourses, registerCourse, unregisterCourse, submitProfileForApproval } from "@/lib/actions";
 import toast from "react-hot-toast";
-import { User, Mail, Phone, Briefcase, MapPin, Linkedin, Edit3, Save, X, Shield, Clock, CheckCircle, XCircle } from "lucide-react";
+import { User, Mail, Phone, Briefcase, MapPin, Linkedin, Edit3, Save, X, Shield, Clock, CheckCircle, XCircle, Send } from "lucide-react";
 import Image from "next/image";
 
 const ProfileCard = () => {
   const [courses, setCourses] = useState<any[]>([]);
-const [loadingCourses, setLoadingCourses] = useState(true);
-
-useEffect(() => {
-  const fetchAllCourses = async () => {
-    try {
-      const allCourses = await fetchCourses();
-      setCourses(allCourses);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to fetch courses");
-    } finally {
-      setLoadingCourses(false);
-    }
-  };
-  fetchAllCourses();
-}, []);
-
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const { currentUserID } = useContext(UserContext);
   const router = useRouter();
   const [userData, setUserData] = useState<any>({});
   const [editableData, setEditableData] = useState<any>({});
   const [isEditing, setIsEditing] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!currentUserID) {
       router.push("/");
       return;
     }
-    (async () => {
-      try {
-        const data = await getUserDoc(currentUserID);
-        setUserData(data);
-        setEditableData(data);
-      } catch (e) {
-        console.error(e);
-        router.push("/");
-      }
-    })();
+    loadUserData();
   }, [currentUserID]);
+
+  useEffect(() => {
+    const fetchAllCourses = async () => {
+      try {
+        const allCourses = await fetchCourses();
+        setCourses(allCourses);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to fetch courses");
+      } finally {
+        setLoadingCourses(false);
+      }
+    };
+    fetchAllCourses();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const data = await getUserDoc(currentUserID!);
+      setUserData(data);
+      setEditableData(data);
+    } catch (e) {
+      console.error(e);
+      router.push("/");
+    }
+  };
 
   const handleChange = (section: string, key: string, value: string) => {
     setEditableData((prev: any) => ({
@@ -64,13 +66,61 @@ useEffect(() => {
       setUserData(editableData);
       setIsEditing(false);
       setActiveSection(null);
-      // toast.success("Profile updated successfully!");
+      await loadUserData(); // Reload to get updated data
+    } catch (error: any) {
+      if (error.message.includes("15 days")) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to update profile");
+      }
+    }
+  };
+
+  const handleSubmitForApproval = async () => {
+    setIsSubmitting(true);
+    try {
+      await submitProfileForApproval(currentUserID!);
+      await loadUserData(); // Reload to get updated status
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCourseRegistration = async (courseCode: string, isRegistered: boolean) => {
+    if (userData.status === "approved") {
+      toast.error("Cannot modify courses after approval");
+      return;
+    }
+
+    try {
+      if (isRegistered) {
+        await unregisterCourse(courseCode, currentUserID!);
+      } else {
+        await registerCourse(courseCode, currentUserID!);
+      }
+      await loadUserData(); // Reload to get updated course list
     } catch (error) {
-      toast.error("Failed to update profile");
+      console.error(error);
+      toast.error("Failed to update course registration");
     }
   };
 
   const openEditSection = (section: string) => {
+    if (userData.status === "approved") {
+      const lastEditDate = userData.lastEditDate?.toDate();
+      const fifteenDaysAgo = new Date();
+      fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+      
+      if (lastEditDate && lastEditDate > fifteenDaysAgo) {
+        const nextEditDate = new Date(lastEditDate);
+        nextEditDate.setDate(nextEditDate.getDate() + 15);
+        toast.error(`You can edit your profile after ${nextEditDate.toLocaleDateString()}`);
+        return;
+      }
+    }
+    
     setActiveSection(section);
     setIsEditing(true);
   };
@@ -81,9 +131,29 @@ useEffect(() => {
     setEditableData(userData);
   };
 
-  // Status badge component with appropriate colors
+  // Check if profile is complete for submission
+  const isProfileComplete = () => {
+    const personal = userData.personalDetails || {};
+    const connection = userData.connectionDetails || {};
+    
+    return personal.fullName && 
+           personal.age && 
+           personal.gender &&
+           connection.contactNumber && 
+           connection.linkedIn &&
+           userData.selectedCourses?.length > 0;
+  };
+
+  // Status badge component
   const StatusBadge = ({ status }: { status: string }) => {
     const statusConfig = {
+      draft: {
+        bgColor: "bg-gray-100",
+        textColor: "text-gray-800",
+        borderColor: "border-gray-200",
+        icon: <Clock size={14} />,
+        label: "Draft"
+      },
       pending: {
         bgColor: "bg-amber-100",
         textColor: "text-amber-800",
@@ -107,7 +177,7 @@ useEffect(() => {
       }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
 
     return (
       <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full ${config.bgColor} ${config.textColor} border ${config.borderColor} text-sm font-medium`}>
@@ -145,15 +215,14 @@ useEffect(() => {
                   <input
                     type="text"
                     value={editableData.personalDetails?.enrollmentNumber || ""}
-                    onChange={(e) =>
-                      handleChange("personalDetails", "enrollmentNumber", e.target.value)
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Enrollment number is auto-generated</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name
+                    Full Name *
                   </label>
                   <input
                     type="text"
@@ -162,11 +231,12 @@ useEffect(() => {
                       handleChange("personalDetails", "fullName", e.target.value)
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Age
+                    Age *
                   </label>
                   <input
                     type="number"
@@ -175,7 +245,25 @@ useEffect(() => {
                       handleChange("personalDetails", "age", e.target.value)
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                    required
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gender *
+                  </label>
+                  <select
+                    value={editableData.personalDetails?.gender || "male"}
+                    onChange={(e) =>
+                      handleChange("personalDetails", "gender", e.target.value)
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="prefer-not-to-say">Prefer not to say</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -191,19 +279,6 @@ useEffect(() => {
                     value={editableData.employmentDetails?.company || ""}
                     onChange={(e) =>
                       handleChange("employmentDetails", "company", e.target.value)
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Industry
-                  </label>
-                  <input
-                    type="text"
-                    value={editableData.employmentDetails?.industry || ""}
-                    onChange={(e) =>
-                      handleChange("employmentDetails", "industry", e.target.value)
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                   />
@@ -228,28 +303,32 @@ useEffect(() => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    LinkedIn Profile
+                    LinkedIn Profile *
                   </label>
                   <input
-                    type="text"
+                    type="url"
                     value={editableData.connectionDetails?.linkedIn || ""}
                     onChange={(e) =>
                       handleChange("connectionDetails", "linkedIn", e.target.value)
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                    placeholder="https://linkedin.com/in/yourprofile"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Number
+                    Contact Number *
                   </label>
                   <input
-                    type="text"
+                    type="tel"
                     value={editableData.connectionDetails?.contactNumber || ""}
                     onChange={(e) =>
                       handleChange("connectionDetails", "contactNumber", e.target.value)
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                    placeholder="+91 1234567890"
+                    required
                   />
                 </div>
                 <div>
@@ -264,8 +343,6 @@ useEffect(() => {
                 </div>
               </div>
             )}
-           
-
           </div>
           
           <div className="flex justify-end gap-3 p-6 border-t">
@@ -327,18 +404,54 @@ useEffect(() => {
                 </div>
                 <p className="text-gray-600">
                   {userData.employmentDetails?.company 
-                    ? `${userData.employmentDetails.company} • ${userData.employmentDetails.industry}` 
+                    ? `${userData.employmentDetails.company} • ${userData.employmentDetails.location}` 
                     : "Employment information not provided"}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Enrollment: {userData.personalDetails?.enrollmentNumber || "Not generated"}
                 </p>
               </div>
               <button 
                 onClick={() => openEditSection("personalDetails")}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors shadow-sm"
+                disabled={userData.status === "approved"}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-sm ${
+                  userData.status === "approved" 
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed" 
+                    : "bg-slate-800 text-white hover:bg-slate-900"
+                }`}
               >
                 <Edit3 size={18} />
                 Update Profile
               </button>
             </div>
+
+            {/* Submit for Approval Section */}
+            {(userData.status === "draft" || userData.status === "rejected") && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h3 className="font-semibold text-blue-800 mb-1">
+                      {userData.status === "rejected" ? "Profile Rejected - Please update and resubmit" : "Complete your profile for approval"}
+                    </h3>
+                    <p className="text-blue-600 text-sm">
+                      Fill all required fields (*) and select at least one course to submit for approval
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSubmitForApproval}
+                    disabled={!isProfileComplete() || isSubmitting}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                      isProfileComplete() 
+                        ? "bg-green-600 text-white hover:bg-green-700" 
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    <Send size={18} />
+                    {isSubmitting ? "Submitting..." : "Submit for Approval"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Personal Details Card */}
@@ -350,7 +463,12 @@ useEffect(() => {
                   </h2>
                   <button 
                     onClick={() => openEditSection("personalDetails")}
-                    className="text-slate-600 hover:text-slate-800 transition-colors p-1 rounded hover:bg-slate-200"
+                    disabled={userData.status === "approved"}
+                    className={`p-1 rounded transition-colors ${
+                      userData.status === "approved" 
+                        ? "text-gray-400 cursor-not-allowed" 
+                        : "text-slate-600 hover:text-slate-800 hover:bg-slate-200"
+                    }`}
                   >
                     <Edit3 size={18} />
                   </button>
@@ -359,13 +477,25 @@ useEffect(() => {
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Enrollment Number</p>
                     <p className="text-gray-800 font-medium">
-                      {userData.personalDetails?.enrollmentNumber || "Not provided"}
+                      {userData.personalDetails?.enrollmentNumber || "Not generated"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">Age</p>
+                    <p className="text-sm text-gray-500 mb-1">Full Name {!userData.personalDetails?.fullName && <span className="text-red-500">*</span>}</p>
+                    <p className="text-gray-800 font-medium">
+                      {userData.personalDetails?.fullName || "Not provided"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Age {!userData.personalDetails?.age && <span className="text-red-500">*</span>}</p>
                     <p className="text-gray-800 font-medium">
                       {userData.personalDetails?.age ? `${userData.personalDetails.age} years` : "Not provided"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Gender {!userData.personalDetails?.gender && <span className="text-red-500">*</span>}</p>
+                    <p className="text-gray-800 font-medium capitalize">
+                      {userData.personalDetails?.gender || "Not provided"}
                     </p>
                   </div>
                 </div>
@@ -380,7 +510,12 @@ useEffect(() => {
                   </h2>
                   <button 
                     onClick={() => openEditSection("employmentDetails")}
-                    className="text-slate-600 hover:text-slate-800 transition-colors p-1 rounded hover:bg-slate-200"
+                    disabled={userData.status === "approved"}
+                    className={`p-1 rounded transition-colors ${
+                      userData.status === "approved" 
+                        ? "text-gray-400 cursor-not-allowed" 
+                        : "text-slate-600 hover:text-slate-800 hover:bg-slate-200"
+                    }`}
                   >
                     <Edit3 size={18} />
                   </button>
@@ -390,12 +525,6 @@ useEffect(() => {
                     <p className="text-sm text-gray-500 mb-1">Company</p>
                     <p className="text-gray-800 font-medium">
                       {userData.employmentDetails?.company || "Not provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Industry</p>
-                    <p className="text-gray-800 font-medium">
-                      {userData.employmentDetails?.industry || "Not provided"}
                     </p>
                   </div>
                   <div>
@@ -417,7 +546,12 @@ useEffect(() => {
                   </h2>
                   <button 
                     onClick={() => openEditSection("connectionDetails")}
-                    className="text-slate-600 hover:text-slate-800 transition-colors p-1 rounded hover:bg-slate-200"
+                    disabled={userData.status === "approved"}
+                    className={`p-1 rounded transition-colors ${
+                      userData.status === "approved" 
+                        ? "text-gray-400 cursor-not-allowed" 
+                        : "text-slate-600 hover:text-slate-800 hover:bg-slate-200"
+                    }`}
                   >
                     <Edit3 size={18} />
                   </button>
@@ -431,13 +565,13 @@ useEffect(() => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">Contact Number</p>
+                    <p className="text-sm text-gray-500 mb-1">Contact Number {!userData.connectionDetails?.contactNumber && <span className="text-red-500">*</span>}</p>
                     <p className="text-gray-800 font-medium">
                       {userData.connectionDetails?.contactNumber || "Not provided"}
                     </p>
                   </div>
                   <div className="md:col-span-2">
-                    <p className="text-sm text-gray-500 mb-1">LinkedIn Profile</p>
+                    <p className="text-sm text-gray-500 mb-1">LinkedIn Profile {!userData.connectionDetails?.linkedIn && <span className="text-red-500">*</span>}</p>
                     {userData.connectionDetails?.linkedIn ? (
                       <a 
                         href={userData.connectionDetails.linkedIn} 
@@ -445,7 +579,7 @@ useEffect(() => {
                         rel="noopener noreferrer"
                         className="text-slate-700 hover:text-slate-900 hover:underline flex items-center gap-1 font-medium"
                       >
-                        {/* <Linkedin size={16} /> */}
+                        <Linkedin size={16} />
                         {userData.connectionDetails.linkedIn}
                       </a>
                     ) : (
@@ -454,51 +588,48 @@ useEffect(() => {
                   </div>
                 </div>
               </div>
-               {/* Courses Registration Card */}
-<div className="bg-slate-50 rounded-xl p-6 border border-gray-100 md:col-span-2">
-  <h2 className="text-xl font-semibold text-gray-800 mb-4">Register for Courses</h2>
 
-  {loadingCourses ? (
-    <p>Loading courses...</p>
-  ) : (
-    <div className="space-y-3">
-      {courses.map(course => {
-        const isRegistered = course.enrolledEmails?.includes(userData.connectionDetails?.emailAddress);
+              {/* Courses Registration Card */}
+              <div className="bg-slate-50 rounded-xl p-6 border border-gray-100 md:col-span-2">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Course Registration</h2>
+                {userData.status === "approved" && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-yellow-800 text-sm">
+                      Course selection cannot be modified after approval
+                    </p>
+                  </div>
+                )}
 
-        return (
-          <div key={course.id} className="flex justify-between items-center p-3 border rounded-lg">
-            <div>
-              <p className="font-medium text-gray-800">{course.courseName}</p>
-              <p className="text-sm text-gray-500">{course.id}</p>
-            </div>
-            <button
-              disabled={isRegistered}
-              onClick={async () => {
-                try {
-                  await registerCourse(course.id, userData.connectionDetails.emailAddress);
-                  // update local state so UI shows registration immediately
-                  setCourses(prev => prev.map(c => 
-                    c.id === course.id 
-                      ? { ...c, enrolledEmails: [...(c.enrolledEmails || []), userData.connectionDetails.emailAddress] }
-                      : c
-                  ));
-                } catch (err) {
-                  console.error(err);
-                  toast.error("Failed to register");
-                }
-              }}
-              className={`px-4 py-2 rounded-lg text-white transition-colors ${
-                isRegistered ? "bg-gray-400 cursor-not-allowed" : "bg-slate-800 hover:bg-slate-900"
-              }`}
-            >
-              {isRegistered ? "Registered" : "Register"}
-            </button>
-          </div>
-        )
-      })}
-    </div>
-  )}
-</div>
+                {loadingCourses ? (
+                  <p>Loading courses...</p>
+                ) : (
+                  <div className="space-y-3">
+                    {courses.map(course => {
+                      const isRegistered = userData.selectedCourses?.includes(course.id);
+
+                      return (
+                        <div key={course.id} className="flex justify-between items-center p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium text-gray-800">{course.courseName}</p>
+                            <p className="text-sm text-gray-500">{course.id}</p>
+                          </div>
+                          <button
+                            onClick={() => handleCourseRegistration(course.id, isRegistered)}
+                            disabled={userData.status === "approved"}
+                            className={`px-4 py-2 rounded-lg text-white transition-colors ${
+                              isRegistered 
+                                ? "bg-red-600 hover:bg-red-700" 
+                                : "bg-slate-800 hover:bg-slate-900"
+                            } ${userData.status === "approved" ? "opacity-50 cursor-not-allowed" : ""}`}
+                          >
+                            {isRegistered ? "Unregister" : "Register"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

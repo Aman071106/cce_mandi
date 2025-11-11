@@ -1,9 +1,32 @@
 import { User } from "firebase/auth";
 import { db } from "@/firebase/firebase";
 import toast from "react-hot-toast";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, addDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, addDoc, query, where, orderBy, serverTimestamp, runTransaction } from "firebase/firestore";
 
-// ... (keep all your existing functions)
+// Generate unique enrollment number
+const generateEnrollmentNumber = async (): Promise<string> => {
+  const counterRef = doc(db, "counters", "enrollment");
+  let enrollmentNumber = "CF0001";
+  
+  try {
+    await runTransaction(db, async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      if (counterDoc.exists()) {
+        const currentCount = counterDoc.data().count;
+        enrollmentNumber = `CF${(currentCount + 1).toString().padStart(4, '0')}`;
+        transaction.update(counterRef, { count: currentCount + 1 });
+      } else {
+        transaction.set(counterRef, { count: 1 });
+      }
+    });
+  } catch (error) {
+    console.error("Error generating enrollment number:", error);
+    // Fallback: use timestamp
+    enrollmentNumber = `CF${Date.now().toString().slice(-6)}`;
+  }
+  
+  return enrollmentNumber;
+};
 
 export const createUserDoc = async (userDoc: User) => {
   const userDocRef = doc(db, "users", userDoc.uid);
@@ -11,17 +34,19 @@ export const createUserDoc = async (userDoc: User) => {
 
   if (!userSnapshot.exists()) {
     try {
+      const enrollmentNumber = await generateEnrollmentNumber();
+      
       await setDoc(userDocRef, {
         email: userDoc.email || "",
-        status: "pending", // first-time login status
+        status: "draft", // New users start as draft
         personalDetails: {
-          enrollmentNumber: "",
+          enrollmentNumber: enrollmentNumber,
           fullName: "",
           age: "",
+          gender: "male",
         },
         employmentDetails: {
           company: "",
-          industry: "",
           location: "",
         },
         connectionDetails: {
@@ -30,6 +55,9 @@ export const createUserDoc = async (userDoc: User) => {
           emailAddress: userDoc.email || "",
         },
         selectedCourses: [],
+        profileSubmitted: false,
+        submissionDate: null,
+        lastEditDate: null,
       });
     } catch (e) {
       toast.error("Unexpected error creating user. See console.");
@@ -46,24 +74,75 @@ export const getUserDoc = async (userID: string) => {
   const userSnapshot = await getDoc(userDocRef);
 
   if (!userSnapshot.exists()) {
-    // toast.error("User not found!");
     throw new Error("User not found");
   }
   return userSnapshot.data();
 };
 
-// Update user profile
-export const updateUserDoc = async (userID: string, data: any) => {
+// Update user profile (with restrictions)
+export const updateUserDoc = async (userID: string, data: any, isAdmin: boolean = false) => {
   const userDocRef = doc(db, "users", userID);
+  const userData = await getUserDoc(userID);
+  
+  // Check if user can edit profile
+  if (!isAdmin && userData.status === "approved") {
+    const lastEditDate = userData.lastEditDate?.toDate();
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+    
+    if (lastEditDate && lastEditDate > fifteenDaysAgo) {
+      throw new Error("Profile can only be edited once every 15 days after approval");
+    }
+  }
+  
   try {
-    await updateDoc(userDocRef, data);
+    await updateDoc(userDocRef, {
+      ...data,
+      lastEditDate: serverTimestamp()
+    });
     toast.success("Profile updated successfully!");
-  } catch (e) {
+  } catch (e: any) {
+    if (e.message.includes("15 days")) {
+      throw e;
+    }
     toast.error("Error updating profile");
     console.log(e);
   }
 };
 
+// Submit profile for approval
+export const submitProfileForApproval = async (userID: string) => {
+  const userDocRef = doc(db, "users", userID);
+  const userData = await getUserDoc(userID);
+  
+  // Validate required fields
+  const personalDetails = userData.personalDetails || {};
+  const connectionDetails = userData.connectionDetails || {};
+  
+  if (!personalDetails.fullName || !personalDetails.age || !personalDetails.gender) {
+    throw new Error("Please complete all personal details");
+  }
+  
+  if (!connectionDetails.contactNumber || !connectionDetails.linkedIn) {
+    throw new Error("Please complete all connection details");
+  }
+  
+  if (!userData.selectedCourses || userData.selectedCourses.length === 0) {
+    throw new Error("Please select at least one course");
+  }
+  
+  try {
+    await updateDoc(userDocRef, {
+      status: "pending",
+      profileSubmitted: true,
+      submissionDate: serverTimestamp()
+    });
+    toast.success("Profile submitted for approval!");
+  } catch (e) {
+    toast.error("Error submitting profile");
+    console.log(e);
+  }
+};
 
 // Fetch all pending users
 interface PendingUser {
@@ -74,10 +153,10 @@ interface PendingUser {
     enrollmentNumber: string;
     fullName: string;
     age: string;
+    gender: string;
   };
   employmentDetails: {
     company: string;
-    industry: string;
     location: string;
   };
   connectionDetails: {
@@ -92,6 +171,7 @@ export const fetchPendingUsers = async () => {
   const usersCol = collection(db, "users");
   const usersSnapshot = await getDocs(usersCol);
   const pendingUsers: PendingUser[] = [];
+  
   usersSnapshot.forEach(docSnap => {
     const data = docSnap.data();
     if (data.status === "pending") {
@@ -99,8 +179,8 @@ export const fetchPendingUsers = async () => {
         id: docSnap.id,
         email: data.email || "",
         status: data.status || "",
-        personalDetails: data.personalDetails || { enrollmentNumber: "", fullName: "", age: "" },
-        employmentDetails: data.employmentDetails || { company: "", industry: "", location: "" },
+        personalDetails: data.personalDetails || { enrollmentNumber: "", fullName: "", age: "", gender: "male" },
+        employmentDetails: data.employmentDetails || { company: "", location: "" },
         connectionDetails: data.connectionDetails || { linkedIn: "", contactNumber: "", emailAddress: "" },
         selectedCourses: data.selectedCourses || []
       });
@@ -113,40 +193,62 @@ export const fetchPendingUsers = async () => {
 export const approveUser = async (userID: string) => {
   const userRef = doc(db, "users", userID);
   await updateDoc(userRef, { status: "approved" });
-  // toast.success("User approved!");
 };
 
 // Reject user
 export const rejectUser = async (userID: string) => {
   const userRef = doc(db, "users", userID);
   await updateDoc(userRef, { status: "rejected" });
-  // toast.success("User rejected!");
 };
 
 // Delete user
 export const deleteUser = async (userID: string) => {
   await deleteDoc(doc(db, "users", userID));
-  // toast.success("User deleted!");
 };
 
 // Add a new course
 export const addCourse = async (courseCode: string, courseName: string) => {
   const courseRef = doc(db, "courses", courseCode);
   await setDoc(courseRef, { courseName, enrolledEmails: [] });
-  // toast.success("Course added!");
 };
 
-// Register user email to course
-export const registerCourse = async (courseCode: string, userEmail: string) => {
+// Register user for course
+export const registerCourse = async (courseCode: string, userID: string) => {
+  const userDocRef = doc(db, "users", userID);
+  const userData = await getUserDoc(userID);
+  
+  const selectedCourses = userData.selectedCourses || [];
+  if (!selectedCourses.includes(courseCode)) {
+    selectedCourses.push(courseCode);
+  }
+  
+  await updateDoc(userDocRef, { selectedCourses });
+  
+  // Also add to course's enrolled emails
   const courseRef = doc(db, "courses", courseCode);
   const courseSnap = await getDoc(courseRef);
-  if (!courseSnap.exists()) throw new Error("Course not found");
+  if (courseSnap.exists()) {
+    const enrolledEmails = courseSnap.data().enrolledEmails || [];
+    const userEmail = userData.connectionDetails?.emailAddress;
+    if (userEmail && !enrolledEmails.includes(userEmail)) {
+      enrolledEmails.push(userEmail);
+      await updateDoc(courseRef, { enrolledEmails });
+    }
+  }
+  
+  toast.success("Course registered successfully!");
+};
 
-  const enrolledEmails = courseSnap.data().enrolledEmails || [];
-  if (!enrolledEmails.includes(userEmail)) enrolledEmails.push(userEmail);
-
-  await updateDoc(courseRef, { enrolledEmails });
-  toast.success("Registered for course successfully!");
+// Unregister user from course
+export const unregisterCourse = async (courseCode: string, userID: string) => {
+  const userDocRef = doc(db, "users", userID);
+  const userData = await getUserDoc(userID);
+  
+  const selectedCourses = userData.selectedCourses || [];
+  const updatedCourses = selectedCourses.filter((course: string) => course !== courseCode);
+  
+  await updateDoc(userDocRef, { selectedCourses: updatedCourses });
+  toast.success("Course unregistered successfully!");
 };
 
 // Fetch all courses
@@ -178,14 +280,13 @@ export const fetchAllUsers = async () => {
 
   usersSnapshot.forEach(docSnap => {
     const data = docSnap.data();
-    // Check if status exists and equals "approved"
     if (data?.status?.toLowerCase() === "approved") {
       allUsers.push({
         id: docSnap.id,
         email: data.email || "",
         status: data.status || "",
-        personalDetails: data.personalDetails || { enrollmentNumber: "", fullName: "", age: "" },
-        employmentDetails: data.employmentDetails || { company: "", industry: "", location: "", experience: "" },
+        personalDetails: data.personalDetails || { enrollmentNumber: "", fullName: "", age: "", gender: "male" },
+        employmentDetails: data.employmentDetails || { company: "", location: "" },
         connectionDetails: data.connectionDetails || { linkedIn: "", contactNumber: "", emailAddress: "" },
         selectedCourses: data.selectedCourses || []
       });
@@ -195,36 +296,27 @@ export const fetchAllUsers = async () => {
   return allUsers;
 };
 
-// Forum Functions
+// Forum Functions - Admin only posts
 export interface ForumPost {
   id: string;
   title: string;
   content: string;
+  relevantLinks?: string[];
   authorId: string;
   authorName: string;
   authorEmail: string;
   createdAt: any;
   updatedAt: any;
-  comments?: Comment[];
 }
 
-export interface Comment {
-  id: string;
-  postId: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorEmail: string;
-  createdAt: any;
-}
-
-// Create a new forum post
-export const createForumPost = async (title: string, content: string, authorId: string, authorName: string, authorEmail: string) => {
+// Create a new forum post (Admin only)
+export const createForumPost = async (title: string, content: string, relevantLinks: string[], authorId: string, authorName: string, authorEmail: string) => {
   try {
     const postsRef = collection(db, "forumPosts");
     const postData = {
       title,
       content,
+      relevantLinks: relevantLinks || [],
       authorId,
       authorName,
       authorEmail,
@@ -234,13 +326,19 @@ export const createForumPost = async (title: string, content: string, authorId: 
     
     const docRef = await addDoc(postsRef, postData);
     
-    // Create notification for all users about new post
-    await createNotification(
-      "New Forum Post",
-      `New discussion: ${title}`,
-      "forum",
-      docRef.id
+    // Create notification for all approved users about new post
+    const approvedUsers = await fetchAllUsers();
+    const notifications = approvedUsers.map(user => 
+      createNotification(
+        "New Forum Post",
+        `New discussion: ${title}`,
+        "forum",
+        docRef.id,
+        user.id
+      )
     );
+    
+    await Promise.all(notifications);
      
     return docRef.id;
   } catch (e) { 
@@ -249,7 +347,7 @@ export const createForumPost = async (title: string, content: string, authorId: 
   }
 };
 
-// Fetch all forum posts with comments
+// Fetch all forum posts
 export const fetchForumPosts = async (): Promise<ForumPost[]> => {
   const postsRef = collection(db, "forumPosts");
   const postsQuery = query(postsRef, orderBy("createdAt", "desc"));
@@ -257,120 +355,22 @@ export const fetchForumPosts = async (): Promise<ForumPost[]> => {
   
   const posts: ForumPost[] = [];
   
-  for (const docSnap of postsSnapshot.docs) {
+  postsSnapshot.forEach(docSnap => {
     const data = docSnap.data();
-    const comments = await fetchCommentsForPost(docSnap.id);
-    
     posts.push({
       id: docSnap.id,
       title: data.title || "",
       content: data.content || "",
+      relevantLinks: data.relevantLinks || [],
       authorId: data.authorId || "",
       authorName: data.authorName || "",
       authorEmail: data.authorEmail || "",
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
-      comments: comments,
     });
-  }
+  });
   
   return posts;
-};
-
-// Add comment to a post
-export const addCommentToPost = async (postId: string, content: string, authorId: string, authorName: string, authorEmail: string) => {
-  try {
-    const commentsRef = collection(db, "forumComments");
-    const commentData = {
-      postId,
-      content,
-      authorId,
-      authorName,
-      authorEmail,
-      createdAt: serverTimestamp(),
-    };
-    
-    await addDoc(commentsRef, commentData);
-    
-    // Create notification for post author about new comment
-    const postDoc = await getDoc(doc(db, "forumPosts", postId));
-    if (postDoc.exists()) {
-      const postData = postDoc.data();
-      if (postData.authorId !== authorId) {
-        await createNotification(
-          "New Comment",
-          `${authorName} commented on your post: "${content.substring(0, 50)}..."`,
-          "comment",
-          postId
-        );
-      }
-    }
-     
-  } catch (e) {
-    toast.error("Error adding comment");
-    console.log(e);
-    throw e;
-  }
-};
-
-// Fetch comments for a specific post
-export const fetchCommentsForPost = async (postId: string): Promise<Comment[]> => {
-  const commentsRef = collection(db, "forumComments");
-  let comments: Comment[] = [];
-  
-  try {
-    // Try the optimized query first
-    const commentsQuery = query(commentsRef, where("postId", "==", postId));
-    const commentsSnapshot = await getDocs(commentsQuery);
-    
-    commentsSnapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      comments.push({
-        id: docSnap.id,
-        postId: data.postId,
-        content: data.content || "",
-        authorId: data.authorId || "",
-        authorName: data.authorName || "",
-        authorEmail: data.authorEmail || "",
-        createdAt: data.createdAt,
-      });
-    });
-    
-    // Sort manually by createdAt on client side
-    comments.sort((a, b) => {
-      const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
-      const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
-      return timeA - timeB; // Ascending order (oldest first for comments)
-    });
-    
-  } catch (error) {
-    console.error("Error fetching comments:", error);
-    // Fallback: get all comments and filter manually
-    const allSnapshot = await getDocs(commentsRef);
-    allSnapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      if (data.postId === postId) {
-        comments.push({
-          id: docSnap.id,
-          postId: data.postId,
-          content: data.content || "",
-          authorId: data.authorId || "",
-          authorName: data.authorName || "",
-          authorEmail: data.authorEmail || "",
-          createdAt: data.createdAt,
-        });
-      }
-    });
-    
-    // Sort manually
-    comments.sort((a, b) => {
-      const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
-      const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
-      return timeA - timeB;
-    });
-  }
-  
-  return comments;
 };
 
 // Notification Functions
@@ -380,12 +380,12 @@ export interface Notification {
   message: string;
   type: "forum" | "comment" | "system";
   read: boolean;
-  userId?: string; // if specific to user
-  linkId?: string; // postId or commentId
+  userId: string;
+  linkId?: string;
   createdAt: any;
 }
 
-// Create notification
+// Create notification for specific user
 export const createNotification = async (title: string, message: string, type: "forum" | "comment" | "system", linkId?: string, userId?: string) => {
   try {
     const notificationsRef = collection(db, "notifications");
@@ -405,45 +405,22 @@ export const createNotification = async (title: string, message: string, type: "
   }
 };
 
-// Fetch notifications for user
-export const fetchNotifications = async (userId?: string): Promise<Notification[]> => {
+// Fetch notifications for specific user
+export const fetchNotifications = async (userId: string): Promise<Notification[]> => {
   const notificationsRef = collection(db, "notifications");
-  let allNotifications: Notification[] = [];
+  let userNotifications: Notification[] = [];
   
   try {
-    if (userId) {
-      // First get user-specific notifications
-      const userQuery = query(
-        notificationsRef,
-        where("userId", "==", userId)
-      );
-      const userSnapshot = await getDocs(userQuery);
-      
-      userSnapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        allNotifications.push({
-          id: docSnap.id,
-          title: data.title || "",
-          message: data.message || "",
-          type: data.type || "system",
-          read: data.read || false,
-          userId: data.userId,
-          linkId: data.linkId,
-          createdAt: data.createdAt,
-        });
-      });
-    }
-    
-    // Then get general notifications (no specific user)
-    const generalQuery = query(
+    const userQuery = query(
       notificationsRef,
-      where("userId", "==", null)
+      where("userId", "==", userId),
+      orderBy("createdAt", "desc")
     );
-    const generalSnapshot = await getDocs(generalQuery);
+    const userSnapshot = await getDocs(userQuery);
     
-    generalSnapshot.forEach(docSnap => {
+    userSnapshot.forEach(docSnap => {
       const data = docSnap.data();
-      allNotifications.push({
+      userNotifications.push({
         id: docSnap.id,
         title: data.title || "",
         message: data.message || "",
@@ -455,21 +432,14 @@ export const fetchNotifications = async (userId?: string): Promise<Notification[
       });
     });
     
-    // Sort manually by createdAt on client side
-    allNotifications.sort((a, b) => {
-      const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
-      const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
-      return timeB - timeA; // Descending order (newest first)
-    });
-    
   } catch (error) {
     console.error("Error fetching notifications:", error);
-    // Fallback: get all notifications and filter manually
+    // Fallback
     const allSnapshot = await getDocs(notificationsRef);
     allSnapshot.forEach(docSnap => {
       const data = docSnap.data();
-      if (!userId || data.userId === userId || data.userId === null) {
-        allNotifications.push({
+      if (data.userId === userId) {
+        userNotifications.push({
           id: docSnap.id,
           title: data.title || "",
           message: data.message || "",
@@ -482,15 +452,14 @@ export const fetchNotifications = async (userId?: string): Promise<Notification[
       }
     });
     
-    // Sort manually
-    allNotifications.sort((a, b) => {
+    userNotifications.sort((a, b) => {
       const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
       const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
       return timeB - timeA;
     });
   }
   
-  return allNotifications;
+  return userNotifications;
 };
 
 // Mark notification as read
@@ -505,20 +474,21 @@ export const markNotificationAsRead = async (notificationId: string) => {
   }
 };
 
-// Mark all notifications as read
-export const markAllNotificationsAsRead = async (userId?: string) => {
+// Mark all notifications as read for user
+export const markAllNotificationsAsRead = async (userId: string) => {
   try {
     const notificationsRef = collection(db, "notifications");
-    const notificationsSnapshot = await getDocs(notificationsRef);
+    const userQuery = query(
+      notificationsRef,
+      where("userId", "==", userId),
+      where("read", "==", false)
+    );
     
+    const notificationsSnapshot = await getDocs(userQuery);
     const updatePromises: Promise<void>[] = [];
     
     notificationsSnapshot.docs.forEach(docSnap => {
-      const data = docSnap.data();
-      // Filter on client side
-      if (!data.read && (userId ? data.userId === userId : data.userId === null)) {
-        updatePromises.push(updateDoc(doc(db, "notifications", docSnap.id), { read: true }));
-      }
+      updatePromises.push(updateDoc(doc(db, "notifications", docSnap.id), { read: true }));
     });
     
     await Promise.all(updatePromises);
