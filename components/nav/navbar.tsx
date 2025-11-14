@@ -3,8 +3,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import Image from "next/image";
 import sntcLogo from "@/public/sntc.png";
-import Button from "@/components/button/button";
-import { Menu, X, User, LayoutDashboard, LogOut, Bell, Plus, MessageSquare } from "lucide-react";
+import { Menu, X, User, Bell, Plus, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { signInWithGooglePopup, signOutUser } from "@/firebase/firebase";
@@ -56,7 +55,6 @@ const Navbar = () => {
 
     loadNotifications();
     
-    // Set up real-time updates
     const interval = setInterval(loadNotifications, 30000);
     
     return () => clearInterval(interval);
@@ -72,7 +70,14 @@ const Navbar = () => {
         setUserEmail(user.email);
         setIsAdmin(user.email === adminEmail);
         toast.success("Signed in successfully!");
-        router.push("/profile");
+        
+        // Redirect based on approval status
+        const userData = await getUserDoc(user.uid);
+        if (userData.status === "approved") {
+          router.push("/fellows");
+        } else {
+          router.push("/profile");
+        }
       }
     } catch (e) {
       toast.error("Error signing in. More info in console");
@@ -122,7 +127,7 @@ const Navbar = () => {
   const unreadCount = notifications.filter(notif => !notif.read).length;
 
   const isActiveLink = (path: string) => {
-    return pathname === path ? "text-slate-800 font-semibold" : "text-slate-600 hover:text-slate-800";
+    return pathname === path ? "text-slate-800 font-semibold border-b-2 border-slate-800" : "text-slate-600 hover:text-slate-800";
   };
 
   return (
@@ -138,18 +143,22 @@ const Navbar = () => {
           </Link>
           
           <div className="hidden md:flex gap-6 items-center text-xl font-medium text-slate-700">
-            <Link href="/" className={`transition-colors ${isActiveLink("/")}`}>
+            <Link href="/" className={`transition-colors pb-1 ${isActiveLink("/")}`}>
               Home
             </Link>
-            <Link href="/forum" className={`transition-colors ${isActiveLink("/forum")}`}>
-              Forum
-            </Link>
-            <Link href="/contact" className={`transition-colors ${isActiveLink("/contact")}`}>
+            <Link href="/contact" className={`transition-colors pb-1 ${isActiveLink("/contact")}`}>
               Contact
             </Link>
-            <Link href="/fellows" className={`transition-colors ${isActiveLink("/fellows")}`}>
-              Fellows
-            </Link>
+            {currentUserID && (
+              <>
+                <Link href="/forum" className={`transition-colors pb-1 ${isActiveLink("/forum")}`}>
+                  Forum
+                </Link>
+                <Link href="/fellows" className={`transition-colors pb-1 ${isActiveLink("/fellows")}`}>
+                  Fellows
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
@@ -170,7 +179,6 @@ const Navbar = () => {
                   )}
                 </button>
 
-                {/* Notifications Dropdown */}
                 {showNotifications && (
                   <div className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
                     <div className="p-4 border-b border-gray-200 flex justify-between items-center">
@@ -224,44 +232,44 @@ const Navbar = () => {
                 )}
               </div>
 
+              {/* Profile Icon */}
+              <Link href="/profile">
+                <button className="p-2 rounded-md text-slate-600 hover:text-slate-800 hover:bg-slate-100 transition-colors">
+                  <User size={20} />
+                </button>
+              </Link>
+
               {/* Create Post Button (Admin only) */}
               {isAdmin && (
                 <Link href="/forum/create">
-                  <Button className="flex items-center gap-2 py-2 px-4 bg-green-600 hover:bg-green-700">
+                  <button className="flex items-center gap-2 py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
                     <Plus size={16} />
                     Create Post
-                  </Button>
+                  </button>
                 </Link>
               )}
-
-              <Link href="/profile">
-                <Button variant="outline" className="flex items-center gap-2 py-2 px-4">
-                  <User size={16} />
-                  Profile
-                </Button>
-              </Link>
               
+              {/* Admin Dashboard */}
               {isAdmin && (
                 <Link href="/dashboardAdmin">
-                  <Button className="flex items-center gap-2 py-2 px-4 bg-slate-800 hover:bg-slate-900">
-                    <LayoutDashboard size={16} />
+                  <button className="flex items-center gap-2 py-2 px-4 bg-slate-800 hover:bg-slate-900 text-white rounded-lg transition-colors">
                     Admin Dashboard
-                  </Button>
+                  </button>
                 </Link>
               )}
               
+              {/* Logout Button - RED */}
               <button
                 onClick={logoutUser}
-                className="text-slate-600 hover:text-slate-800 transition-colors flex items-center gap-1 text-sm"
+                className="text-red-600 hover:text-red-800 hover:bg-red-50 transition-colors flex items-center gap-1 text-sm py-2 px-4 rounded-lg font-medium"
               >
-                <LogOut size={16} />
                 Logout
               </button>
             </div>
           ) : (
-            <Button onClick={loginUser} className="py-2 px-4">
+            <button onClick={loginUser} className="py-2 px-4 bg-slate-800 hover:bg-slate-900 text-white rounded-lg transition-colors">
               Login
-            </Button>
+            </button>
           )}
         </div>
 
@@ -314,14 +322,6 @@ const Navbar = () => {
         </Link>
         
         <Link 
-          href="/forum" 
-          className={`py-2 transition-colors ${isActiveLink("/forum")}`}
-          onClick={() => setToggle(false)}
-        >
-          Forum
-        </Link>
-       
-        <Link 
           href="/contact" 
           className={`py-2 transition-colors ${isActiveLink("/contact")}`}
           onClick={() => setToggle(false)}
@@ -329,26 +329,24 @@ const Navbar = () => {
           Contact
         </Link>
         
-        <Link 
-          href="/fellows" 
-          className={`py-2 transition-colors ${isActiveLink("/fellows")}`}
-          onClick={() => setToggle(false)}
-        >
-          Fellows
-        </Link>
-        
-        {isAdmin && (
-          <Link 
-            href="/dashboardAdmin" 
-            className={`py-2 transition-colors ${isActiveLink("/dashboard")}`}
-            onClick={() => setToggle(false)}
-          >
-            Dashboard
-          </Link>
-        )}
-        
-        {currentUserID ? (
+        {currentUserID && (
           <>
+            <Link 
+              href="/forum" 
+              className={`py-2 transition-colors ${isActiveLink("/forum")}`}
+              onClick={() => setToggle(false)}
+            >
+              Forum
+            </Link>
+            
+            <Link 
+              href="/fellows" 
+              className={`py-2 transition-colors ${isActiveLink("/fellows")}`}
+              onClick={() => setToggle(false)}
+            >
+              Fellows
+            </Link>
+            
             <Link 
               href="/profile" 
               className={`py-2 transition-colors ${isActiveLink("/profile")}`}
@@ -356,18 +354,30 @@ const Navbar = () => {
             >
               Profile
             </Link>
+            
+            {isAdmin && (
+              <Link 
+                href="/dashboardAdmin" 
+                className={`py-2 transition-colors ${isActiveLink("/dashboard")}`}
+                onClick={() => setToggle(false)}
+              >
+                Dashboard
+              </Link>
+            )}
+            
             <button
               onClick={async () => {
                 await logoutUser();
                 setToggle(false);
               }}
-              className="text-left py-2 text-slate-600 hover:text-slate-800 transition-colors flex items-center gap-2"
+              className="text-left py-2 text-red-600 hover:text-red-800 transition-colors flex items-center gap-2 font-medium"
             >
-              <LogOut size={16} />
               Logout
             </button>
           </>
-        ) : (
+        )}
+        
+        {!currentUserID && (
           <button
             onClick={async () => {
               await loginUser();
