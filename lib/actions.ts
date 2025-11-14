@@ -496,3 +496,375 @@ export const markAllNotificationsAsRead = async (userId: string) => {
     console.error("Error marking all notifications as read:", e);
   }
 };
+export const superDeleteUser = async (userID: string): Promise<boolean> => {
+  try {
+    console.log(`Starting super delete for user: ${userID}`);
+    
+    // Get user data first to use for cleanup
+    const userData = await getUserDoc(userID);
+    const userEmail = userData.connectionDetails?.emailAddress || userData.email;
+
+    // Perform all deletions in a transaction for data consistency
+    await runTransaction(db, async (transaction) => {
+      // 1. Delete user document
+      const userRef = doc(db, "users", userID);
+      transaction.delete(userRef);
+
+      // 2. Delete all notifications for this user
+      const notificationsRef = collection(db, "notifications");
+      const userNotificationsQuery = query(notificationsRef, where("userId", "==", userID));
+      const notificationsSnapshot = await getDocs(userNotificationsQuery);
+      notificationsSnapshot.forEach(docSnap => {
+        transaction.delete(doc(db, "notifications", docSnap.id));
+      });
+
+      // 3. Remove user from all course enrollments
+      const coursesRef = collection(db, "courses");
+      const coursesSnapshot = await getDocs(coursesRef);
+      coursesSnapshot.forEach(courseDoc => {
+        const courseData = courseDoc.data();
+        if (courseData.enrolledEmails && Array.isArray(courseData.enrolledEmails)) {
+          const updatedEmails = courseData.enrolledEmails.filter((email: string) => email !== userEmail);
+          if (updatedEmails.length !== courseData.enrolledEmails.length) {
+            transaction.update(doc(db, "courses", courseDoc.id), {
+              enrolledEmails: updatedEmails
+            });
+          }
+        }
+      });
+
+      // 4. Delete forum posts by this user
+      const forumPostsRef = collection(db, "forumPosts");
+      const userPostsQuery = query(forumPostsRef, where("authorId", "==", userID));
+      const postsSnapshot = await getDocs(userPostsQuery);
+      postsSnapshot.forEach(docSnap => {
+        transaction.delete(doc(db, "forumPosts", docSnap.id));
+      });
+
+      // 5. Delete any comments by this user (if you have a comments collection)
+      try {
+        const commentsRef = collection(db, "comments");
+        const userCommentsQuery = query(commentsRef, where("authorId", "==", userID));
+        const commentsSnapshot = await getDocs(userCommentsQuery);
+        commentsSnapshot.forEach(docSnap => {
+          transaction.delete(doc(db, "comments", docSnap.id));
+        });
+      } catch (error) {
+        console.log("No comments collection or error deleting comments:", error);
+      }
+
+      // 6. Delete connection requests (if you have a connections collection)
+      try {
+        const connectionsRef = collection(db, "connections");
+        const userConnectionsQuery = query(
+          connectionsRef, 
+          where("fromUserId", "==", userID)
+        );
+        const connectionsSnapshot = await getDocs(userConnectionsQuery);
+        connectionsSnapshot.forEach(docSnap => {
+          transaction.delete(doc(db, "connections", docSnap.id));
+        });
+
+        // Also delete connections where this user is the target
+        const targetConnectionsQuery = query(
+          connectionsRef, 
+          where("toUserId", "==", userID)
+        );
+        const targetConnectionsSnapshot = await getDocs(targetConnectionsQuery);
+        targetConnectionsSnapshot.forEach(docSnap => {
+          transaction.delete(doc(db, "connections", docSnap.id));
+        });
+      } catch (error) {
+        console.log("No connections collection or error deleting connections:", error);
+      }
+
+      // 7. Delete any chat messages (if you have a messages collection)
+      try {
+        const messagesRef = collection(db, "messages");
+        const userMessagesQuery = query(messagesRef, where("senderId", "==", userID));
+        const messagesSnapshot = await getDocs(userMessagesQuery);
+        messagesSnapshot.forEach(docSnap => {
+          transaction.delete(doc(db, "messages", docSnap.id));
+        });
+      } catch (error) {
+        console.log("No messages collection or error deleting messages:", error);
+      }
+
+      // 8. Delete user preferences/settings (if you have a settings collection)
+      try {
+        const settingsRef = doc(db, "userSettings", userID);
+        transaction.delete(settingsRef);
+      } catch (error) {
+        console.log("No userSettings collection or error deleting settings:", error);
+      }
+    });
+
+    console.log(`Super delete completed successfully for user: ${userID}`);
+    toast.success("All your data has been permanently deleted");
+    return true;
+
+  } catch (error) {
+    console.error("Error during super delete:", error);
+    toast.error("Failed to delete all user data. Please try again.");
+    return false;
+  }
+};
+
+
+
+// Add these connection functions to your existing Firebase actions file
+
+// Connection Interfaces
+export interface Connection {
+  id: string;
+  fromUserId: string;
+  fromUserName: string;
+  fromUserEmail: string;
+  toUserId: string;
+  toUserName: string;
+  toUserEmail: string;
+  status: "pending" | "accepted" | "rejected";
+  createdAt: any;
+  updatedAt: any;
+}
+
+// Send connection request
+export const sendConnectionRequest = async (fromUserId: string, toUserId: string) => {
+  try {
+    // Get user data for both users
+    const fromUserData = await getUserDoc(fromUserId);
+    const toUserData = await getUserDoc(toUserId);
+
+    // Check if connection already exists
+    const connectionsRef = collection(db, "connections");
+    const existingConnectionQuery = query(
+      connectionsRef,
+      where("fromUserId", "==", fromUserId),
+      where("toUserId", "==", toUserId)
+    );
+    const existingConnectionSnapshot = await getDocs(existingConnectionQuery);
+
+    if (!existingConnectionSnapshot.empty) {
+      toast.error("Connection request already sent");
+      return;
+    }
+
+    // Check if reverse connection exists
+    const reverseConnectionQuery = query(
+      connectionsRef,
+      where("fromUserId", "==", toUserId),
+      where("toUserId", "==", fromUserId)
+    );
+    const reverseConnectionSnapshot = await getDocs(reverseConnectionQuery);
+
+    if (!reverseConnectionSnapshot.empty) {
+      toast.error("Connection already exists");
+      return;
+    }
+
+    // Create connection request
+    const connectionData = {
+      fromUserId,
+      fromUserName: fromUserData.personalDetails?.fullName || "Unknown User",
+      fromUserEmail: fromUserData.connectionDetails?.emailAddress || fromUserData.email,
+      toUserId,
+      toUserName: toUserData.personalDetails?.fullName || "Unknown User",
+      toUserEmail: toUserData.connectionDetails?.emailAddress || toUserData.email,
+      status: "pending",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    await addDoc(connectionsRef, connectionData);
+
+    // Create notification for the recipient
+    await createNotification(
+      "New Connection Request",
+      `${fromUserData.personalDetails?.fullName || "Someone"} wants to connect with you`,
+      "system",
+      undefined,
+      toUserId
+    );
+
+    toast.success("Connection request sent!");
+  } catch (error) {
+    console.error("Error sending connection request:", error);
+    toast.error("Failed to send connection request");
+  }
+};
+
+// Get user's connections (both sent and received)
+export const getConnections = async (userId: string): Promise<Connection[]> => {
+  try {
+    const connectionsRef = collection(db, "connections");
+    
+    // Get connections where user is the sender
+    const sentQuery = query(
+      connectionsRef,
+      where("fromUserId", "==", userId),
+      where("status", "in", ["accepted", "pending"])
+    );
+    
+    // Get connections where user is the receiver
+    const receivedQuery = query(
+      connectionsRef,
+      where("toUserId", "==", userId),
+      where("status", "in", ["accepted", "pending"])
+    );
+
+    const [sentSnapshot, receivedSnapshot] = await Promise.all([
+      getDocs(sentQuery),
+      getDocs(receivedQuery)
+    ]);
+
+    const connections: Connection[] = [];
+
+    sentSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      connections.push({
+        id: docSnap.id,
+        fromUserId: data.fromUserId,
+        fromUserName: data.fromUserName,
+        fromUserEmail: data.fromUserEmail,
+        toUserId: data.toUserId,
+        toUserName: data.toUserName,
+        toUserEmail: data.toUserEmail,
+        status: data.status,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      });
+    });
+
+    receivedSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      connections.push({
+        id: docSnap.id,
+        fromUserId: data.fromUserId,
+        fromUserName: data.fromUserName,
+        fromUserEmail: data.fromUserEmail,
+        toUserId: data.toUserId,
+        toUserName: data.toUserName,
+        toUserEmail: data.toUserEmail,
+        status: data.status,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      });
+    });
+
+    return connections;
+  } catch (error) {
+    console.error("Error getting connections:", error);
+    return [];
+  }
+};
+
+// Get pending connection requests for a user
+export const getConnectionRequests = async (userId: string): Promise<Connection[]> => {
+  try {
+    const connectionsRef = collection(db, "connections");
+    const requestsQuery = query(
+      connectionsRef,
+      where("toUserId", "==", userId),
+      where("status", "==", "pending")
+    );
+
+    const requestsSnapshot = await getDocs(requestsQuery);
+    const requests: Connection[] = [];
+
+    requestsSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      requests.push({
+        id: docSnap.id,
+        fromUserId: data.fromUserId,
+        fromUserName: data.fromUserName,
+        fromUserEmail: data.fromUserEmail,
+        toUserId: data.toUserId,
+        toUserName: data.toUserName,
+        toUserEmail: data.toUserEmail,
+        status: data.status,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      });
+    });
+
+    return requests;
+  } catch (error) {
+    console.error("Error getting connection requests:", error);
+    return [];
+  }
+};
+
+// Accept connection request
+export const acceptConnectionRequest = async (requestId: string, fromUserId: string, toUserId: string) => {
+  try {
+    const connectionRef = doc(db, "connections", requestId);
+    
+    await updateDoc(connectionRef, {
+      status: "accepted",
+      updatedAt: serverTimestamp()
+    });
+
+    // Create notification for the requester
+    const toUserData = await getUserDoc(toUserId);
+    await createNotification(
+      "Connection Request Accepted",
+      `${toUserData.personalDetails?.fullName || "Someone"} accepted your connection request`,
+      "system",
+      undefined,
+      fromUserId
+    );
+
+    toast.success("Connection request accepted!");
+  } catch (error) {
+    console.error("Error accepting connection request:", error);
+    toast.error("Failed to accept connection request");
+  }
+};
+
+// Reject connection request
+export const rejectConnectionRequest = async (requestId: string) => {
+  try {
+    const connectionRef = doc(db, "connections", requestId);
+    
+    await updateDoc(connectionRef, {
+      status: "rejected",
+      updatedAt: serverTimestamp()
+    });
+
+    toast.success("Connection request rejected");
+  } catch (error) {
+    console.error("Error rejecting connection request:", error);
+    toast.error("Failed to reject connection request");
+  }
+};
+
+// Remove connection (for both users)
+export const removeConnection = async (connectionId: string) => {
+  try {
+    await deleteDoc(doc(db, "connections", connectionId));
+    toast.success("Connection removed");
+  } catch (error) {
+    console.error("Error removing connection:", error);
+    toast.error("Failed to remove connection");
+  }
+};
+
+// Check if two users are connected
+export const checkIfConnected = async (user1Id: string, user2Id: string): Promise<boolean> => {
+  try {
+    const connectionsRef = collection(db, "connections");
+    
+    const connectionQuery = query(
+      connectionsRef,
+      where("status", "==", "accepted"),
+      where("fromUserId", "in", [user1Id, user2Id]),
+      where("toUserId", "in", [user1Id, user2Id])
+    );
+
+    const connectionSnapshot = await getDocs(connectionQuery);
+    return !connectionSnapshot.empty;
+  } catch (error) {
+    console.error("Error checking connection:", error);
+    return false;
+  }
+};
