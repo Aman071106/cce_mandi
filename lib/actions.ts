@@ -38,12 +38,13 @@ export const createUserDoc = async (userDoc: User) => {
       
       await setDoc(userDocRef, {
         email: userDoc.email || "",
-        status: "draft", // New users start as draft
+        status: "draft",
         personalDetails: {
           enrollmentNumber: enrollmentNumber,
           fullName: "",
           age: "",
           gender: "male",
+          profileImage: null, // ✅ Add this with null value
         },
         employmentDetails: {
           company: "",
@@ -143,7 +144,47 @@ export const submitProfileForApproval = async (userID: string) => {
     console.log(e);
   }
 };
+// Add this function to lib/actions.ts
 
+// Upload profile picture to Cloudinary
+export const uploadProfilePicture = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || '');
+  
+  try {
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+    
+    const data = await response.json();
+    return data.secure_url;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw new Error('Failed to upload image');
+  }
+};
+
+// Update user profile picture
+export const updateUserProfilePicture = async (userID: string, imageUrl: string) => {
+  const userDocRef = doc(db, "users", userID);
+  
+  try {
+    await updateDoc(userDocRef, {
+      "personalDetails.profileImage": imageUrl,
+      lastEditDate: serverTimestamp()
+    });
+    toast.success("Profile picture updated successfully!");
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    toast.error("Failed to update profile picture");
+    throw error;
+  }
+};
 // Fetch all pending users
 interface PendingUser {
   id: string;

@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useRef } from "react";
 import { UserContext } from "@/context/user-context";
 import { useRouter } from "next/navigation";
-import { getUserDoc, updateUserDoc, fetchCourses, registerCourse, unregisterCourse, submitProfileForApproval, superDeleteUser } from "@/lib/actions";
+import { getUserDoc, updateUserDoc, fetchCourses, registerCourse, unregisterCourse, submitProfileForApproval, superDeleteUser, uploadProfilePicture, updateUserProfilePicture } from "@/lib/actions";
 import toast from "react-hot-toast";
-import { User, Mail, Phone, Briefcase, MapPin, Linkedin, Edit3, Save, X, Clock, CheckCircle, XCircle, Send, Trash2, AlertTriangle } from "lucide-react";
+import { User, Mail, Phone, Briefcase, MapPin, Linkedin, Edit3, Save, X, Clock, CheckCircle, XCircle, Send, Trash2, AlertTriangle, Camera } from "lucide-react";
 import Image from "next/image";
 import { signOutUser } from "@/firebase/firebase";
 
@@ -28,6 +28,8 @@ const ProfileCard = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuperDelete, setShowSuperDelete] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!currentUserID) {
@@ -63,6 +65,35 @@ const ProfileCard = () => {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      const imageUrl = await uploadProfilePicture(file);
+      await updateUserProfilePicture(currentUserID!, imageUrl);
+      await loadUserData();
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleChange = (section: string, key: string, value: string) => {
     setEditableData((prev: any) => ({
       ...prev,
@@ -72,14 +103,12 @@ const ProfileCard = () => {
 
   const handleSave = async () => {
     try {
-      // Validate LinkedIn URL
       const linkedInUrl = editableData.connectionDetails?.linkedIn;
       if (linkedInUrl && !linkedInUrl.includes('linkedin.com')) {
         toast.error("Please enter a valid LinkedIn URL");
         return;
       }
 
-      // Validate contact number (basic validation)
       const contactNumber = editableData.connectionDetails?.contactNumber;
       if (contactNumber && !/^\+?\d{10,15}$/.test(contactNumber.replace(/[\s-]/g, ''))) {
         toast.error("Please enter a valid contact number");
@@ -482,6 +511,29 @@ const ProfileCard = () => {
                     </div>
                   )}
                 </div>
+                
+                {/* Camera button for upload */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="absolute bottom-0 right-0 bg-slate-800 text-white p-2 rounded-full hover:bg-slate-900 transition-colors shadow-lg disabled:opacity-50"
+                  title="Upload profile picture"
+                >
+                  {uploadingImage ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : (
+                    <Camera size={20} />
+                  )}
+                </button>
+                
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
               </div>
             </div>
           </div>
@@ -616,7 +668,7 @@ const ProfileCard = () => {
                     <Briefcase size={20} className="text-slate-600" />
                     Employment Details
                   </h2>
-                  <button 
+                  <button  
                     onClick={() => openEditSection("employmentDetails")}
                     disabled={userData.status === "approved" || userData.status === "pending"}
                     className={`p-1 rounded transition-colors ${

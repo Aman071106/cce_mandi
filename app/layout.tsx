@@ -39,8 +39,8 @@ export default function RootLayout({
           <div className="w-full h-16 sm:h-20 fixed top-0 z-50">
             <Navbar />
           </div>
-          <div className="w-full min-h-screen">{children}</div>
-          <div className="w-full">
+          <div className="no-scrollbar w-full min-h-screen">{children}</div>
+          <div className="no-scrollbar w-full">
             <Footer />
           </div>
         </UserProvider>

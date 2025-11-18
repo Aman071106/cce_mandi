@@ -4,7 +4,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { fetchAllUsers, fetchCourses, sendConnectionRequest, getConnections, getConnectionRequests, acceptConnectionRequest, rejectConnectionRequest } from "@/lib/actions";
 import { UserContext } from "@/context/user-context";
 import toast from "react-hot-toast";
-import { Users, RefreshCw, Search, Mail, Phone, Linkedin, MessageCircle, Filter, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { RefreshCw, Search, Mail, Phone, Linkedin, Filter, ChevronLeft, ChevronRight, Check, X, MapPin, GraduationCap } from "lucide-react";
 
 const INDUSTRIES = [
   "AI and Data Science",
@@ -14,7 +14,7 @@ const INDUSTRIES = [
   "Generative AI"
 ];
 
-const ITEMS_PER_PAGE = 12; // 4x3 grid
+const ITEMS_PER_PAGE = 9; // 3x3 grid for larger cards
 
 const FellowsPage = () => {
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -36,7 +36,6 @@ const FellowsPage = () => {
     try {
       setRefreshing(true);
       const users = await fetchAllUsers();
-      // Filter out current user
       const filteredUsers = users.filter(user => user.id !== currentUserID);
       setAllUsers(filteredUsers);
       setFilteredUsers(filteredUsers);
@@ -88,11 +87,9 @@ const FellowsPage = () => {
     loadConnectionRequests();
   }, [currentUserID]);
 
-  // Apply filters
   useEffect(() => {
     let filtered = [...allUsers];
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(user =>
         user.personalDetails?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -101,14 +98,12 @@ const FellowsPage = () => {
       );
     }
 
-    // Course filter
     if (selectedCourses.length > 0) {
       filtered = filtered.filter(user =>
         user.selectedCourses?.some((course: string) => selectedCourses.includes(course))
       );
     }
 
-    // Industry filter
     if (selectedIndustries.length > 0) {
       filtered = filtered.filter(user =>
         selectedIndustries.includes(user.employmentDetails?.industry)
@@ -116,7 +111,7 @@ const FellowsPage = () => {
     }
 
     setFilteredUsers(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   }, [searchTerm, selectedCourses, selectedIndustries, allUsers]);
 
   const handleCourseFilter = (courseId: string) => {
@@ -147,7 +142,6 @@ const FellowsPage = () => {
       return;
     }
 
-    // Check if already connected
     const isConnected = connections.some(
       conn => conn.status === "accepted" &&
         ((conn.fromUserId === currentUserID && conn.toUserId === userId) ||
@@ -159,7 +153,6 @@ const FellowsPage = () => {
       return;
     }
 
-    // Check if request already sent
     const requestSent = connections.some(
       conn => conn.status === "pending" &&
         conn.fromUserId === currentUserID &&
@@ -171,7 +164,6 @@ const FellowsPage = () => {
       return;
     }
 
-    // Check if there's a pending request from the other user
     const pendingRequest = connections.some(
       conn => conn.status === "pending" &&
         conn.fromUserId === userId &&
@@ -188,7 +180,6 @@ const FellowsPage = () => {
     loadConnectionRequests();
   };
 
-
   const handleAcceptRequest = async (requestId: string, fromUserId: string) => {
     if (!currentUserID) return;
     await acceptConnectionRequest(requestId, fromUserId, currentUserID);
@@ -201,7 +192,6 @@ const FellowsPage = () => {
     loadConnectionRequests();
   };
 
-  // Pagination
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -223,6 +213,7 @@ const FellowsPage = () => {
           (conn.fromUserId === userId && conn.toUserId === currentUserID))
     );
   };
+
   const hasPendingRequest = (userId: string) => {
     return connections.some(
       conn => conn.status === "pending" &&
@@ -232,7 +223,7 @@ const FellowsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 mt-10 px-4 sm:px-6 lg:px-8">
+    <div className="no-scrollbar min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 mt-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -317,7 +308,6 @@ const FellowsPage = () => {
               </button>
             </div>
 
-            {/* Filter Panel */}
             {showFilters && (
               <div className="border-t border-gray-200 pt-4 space-y-4">
                 <div>
@@ -383,68 +373,126 @@ const FellowsPage = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {currentUsers.map(user => (
-                  <div key={user.id} className="bg-slate-50 border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                    <div className="flex-1 mb-4">
-                      <h3 className="font-semibold text-gray-800 text-lg mb-1">
+                  <div key={user.id} className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-3xl p-8 hover:shadow-xl transition-all hover:border-slate-300">
+                    {/* Header with Enrollment Number */}
+                    <div className="text-center mb-6">
+                      <p className="text-xs font-medium text-gray-500 mb-4">
+                        #{displayValue(user.personalDetails?.enrollmentNumber)}
+                      </p>
+                      
+                      {/* Profile Image */}
+                      <div className="relative w-40 h-40 mx-auto mb-4">
+                        <div className="w-full h-full rounded-full overflow-hidden border-4 border-blue-100 bg-gradient-to-br from-blue-100 to-blue-50">
+                          {user.personalDetails?.profileImage ? (
+                            <img 
+                              src={user.personalDetails.profileImage} 
+                              alt={user.personalDetails?.fullName || "User"}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-blue-400">
+                              {user.personalDetails?.fullName?.charAt(0)?.toUpperCase() || "?"}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Name and Role */}
+                      <h3 className="text-2xl font-bold text-gray-900 mb-1">
                         {displayValue(user.personalDetails?.fullName)}
                       </h3>
-                      <p className="text-sm text-gray-700 font-medium">
-                        {displayValue(user.employmentDetails?.company)}
+                      <p className="text-sm text-gray-600 font-medium mb-1">
+                        CCE Fellow (CCE, IIT Mandi)
                       </p>
-                      {user.employmentDetails?.industry && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {user.employmentDetails.industry}
-                        </p>
+                    </div>
+
+                    {/* Graduated Section */}
+                    <div className="mb-6 text-left">
+                      <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <GraduationCap size={16} />
+                        Graduated:
+                      </h4>
+                      <div className="space-y-1 pl-6">
+                        {user.selectedCourses && user.selectedCourses.length > 0 ? (
+                          user.selectedCourses.map((courseId: string) => {
+                            const course = courses.find(c => c.id === courseId);
+                            return course ? (
+                              <p key={courseId} className="text-sm text-gray-700">
+                                Minor in {course.courseName}
+                              </p>
+                            ) : null;
+                          })
+                        ) : (
+                          <p className="text-sm text-gray-500">No courses selected</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="mb-6 text-left">
+                      <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                        <MapPin size={16} />
+                        Location:
+                      </h4>
+                      <p className="text-sm text-gray-700 pl-6">
+                        {displayValue(user.employmentDetails?.location)}
+                      </p>
+                    </div>
+
+                    {/* Contact Icons */}
+                    <div className="flex justify-center gap-3 mb-6">
+                      {/* Email */}
+                      <a
+                        href={`mailto:${user.connectionDetails?.emailAddress}`}
+                        className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                        title="Email"
+                      >
+                        <Mail size={20} />
+                      </a>
+
+                      {/* LinkedIn */}
+                      {user.connectionDetails?.linkedIn && (
+                        <a
+                          href={user.connectionDetails.linkedIn}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white hover:bg-blue-600 transition-colors"
+                          title="LinkedIn"
+                        >
+                          <Linkedin size={20} />
+                        </a>
+                      )}
+
+                      {/* Phone */}
+                      {user.connectionDetails?.contactNumber && (
+                        <a
+                          href={`tel:${user.connectionDetails.contactNumber}`}
+                          className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white hover:bg-green-600 transition-colors"
+                          title="Phone"
+                        >
+                          <Phone size={20} />
+                        </a>
                       )}
                     </div>
 
-                    <div className="space-y-2 mb-4 text-sm">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Mail size={14} className="text-slate-500 flex-shrink-0" />
-                        <span className="truncate">{displayValue(user.connectionDetails?.emailAddress)}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Phone size={14} className="text-slate-500 flex-shrink-0" />
-                        <span>{displayValue(user.connectionDetails?.contactNumber)}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Linkedin size={14} className="text-slate-500 flex-shrink-0" />
-                        <span>
-                          {user.connectionDetails?.linkedIn ? (
-                            <a
-                              href={user.connectionDetails.linkedIn}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline truncate"
-                            >
-                              Profile
-                            </a>
-                          ) : (
-                            "—"
-                          )}
-                        </span>
-                      </div>
-                    </div>
-
+                    {/* Connect Button */}
                     <button
                       onClick={() => handleConnect(user.id)}
                       disabled={isConnected(user.id) || hasPendingRequest(user.id)}
-                      className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium ${isConnected(user.id)
+                      className={`w-full py-3 rounded-xl font-semibold transition-all ${
+                        isConnected(user.id)
                           ? "bg-green-600 text-white cursor-not-allowed"
                           : hasPendingRequest(user.id)
                             ? "bg-amber-500 text-white cursor-not-allowed"
-                            : "bg-slate-800 text-white hover:bg-slate-900"
-                        }`}
+                            : "bg-gradient-to-r from-slate-700 to-slate-900 text-white hover:from-slate-800 hover:to-slate-950 shadow-md hover:shadow-lg"
+                      }`}
                     >
-                      <MessageCircle size={16} />
                       {isConnected(user.id)
-                        ? "Connected"
+                        ? "✓ Connected"
                         : hasPendingRequest(user.id)
-                          ? "Request Sent"
+                          ? "⏳ Request Sent"
                           : "Connect"
                       }
                     </button>

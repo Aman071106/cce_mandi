@@ -4,7 +4,7 @@ import Link from "next/link";
 
 const ContactPage = () => {
   return (
-    <div className="fade-in-page">
+    <div className="no-scrollbar fade-in-page">
       {/* Page Header */}
       <section className="relative w-full bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-20 flex flex-col items-center">
