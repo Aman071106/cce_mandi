@@ -15,7 +15,7 @@ const AdminDashboard = () => {
   const [expandedUsers, setExpandedUsers] = useState<{[key: string]: boolean}>({});
   const [searchTerm, setSearchTerm] = useState("");
 
-  const adminEmail = "aman07112006@gmail.com";
+  const adminEmail = "cce19112025@gmail.com";
 
   const loadUsers = async () => {
     try {
