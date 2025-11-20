@@ -64,14 +64,14 @@ const ForumPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 mt-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Discussion Forum</h1>
-          <p className="text-gray-600 text-lg">Admin posts and announcements</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Forum</h1>
+          <p className="text-gray-600 text-lg"></p>
         </div>
 
         {posts.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
             <MessageSquare size={48} className="mx-auto text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">No discussions yet</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No posts yet</h3>
             <p className="text-gray-600">Check back later for updates!</p>
           </div>
         ) : (

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { fetchPendingUsers, approveUser, rejectUser, deleteUser, fetchCourses, addCourse } from "@/lib/actions";
 import toast from "react-hot-toast";
-import { CheckCircle, XCircle, X, Plus, Users, BookOpen, RefreshCw, Trash2, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { CheckCircle, XCircle, X, Plus, Users, BookOpen, RefreshCw, Trash2, ChevronDown, ChevronUp, Search, Hash } from "lucide-react";
 
 const AdminDashboard = () => {
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
@@ -15,7 +15,7 @@ const AdminDashboard = () => {
   const [expandedUsers, setExpandedUsers] = useState<{[key: string]: boolean}>({});
   const [searchTerm, setSearchTerm] = useState("");
 
-  const adminEmail = "cce19112025@gmail.com";
+  const adminEmail = "aman07112006@gmail.com";
 
   const loadUsers = async () => {
     try {
@@ -204,6 +204,22 @@ const AdminDashboard = () => {
                       <p className="text-gray-500 text-sm truncate">
                         {user.connectionDetails?.emailAddress}
                       </p>
+                      {/* Show course count and registration numbers in collapsed view */}
+                      {user.courseRegistrations && user.courseRegistrations.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {user.courseRegistrations.slice(0, 2).map((reg: any, index: number) => (
+                            <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              <Hash size={10} />
+                              {reg.courseCode}: {reg.registrationNumber}
+                            </span>
+                          ))}
+                          {user.courseRegistrations.length > 2 && (
+                            <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                              +{user.courseRegistrations.length - 2} more
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 ml-4">
                       <StatusBadge status={user.status} />
@@ -218,17 +234,38 @@ const AdminDashboard = () => {
                           <h3 className="text-sm font-medium text-gray-500 mb-1">Personal Details</h3>
                           <p className="text-gray-800"><strong>Enrollment:</strong> {user.personalDetails?.enrollmentNumber || "Not provided"}</p>
                           <p className="text-gray-800"><strong>Age:</strong> {user.personalDetails?.age || "Not provided"}</p>
+                          <p className="text-gray-800"><strong>Gender:</strong> {user.personalDetails?.gender || "Not provided"}</p>
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 mb-1">Employment Details</h3>
+                          <p className="text-gray-800"><strong>Status:</strong> {user.employmentDetails?.employmentStatus || "Not provided"}</p>
                           <p className="text-gray-800"><strong>Company:</strong> {user.employmentDetails?.company || "Not provided"}</p>
                           <p className="text-gray-800"><strong>Industry:</strong> {user.employmentDetails?.industry || "Not provided"}</p>
+                          <p className="text-gray-800"><strong>Location:</strong> {user.employmentDetails?.location || "Not provided"}</p>
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 mb-1">Connection Details</h3>
                           <p className="text-gray-800"><strong>LinkedIn:</strong> {user.connectionDetails?.linkedIn  || "Not provided"}</p>
                           <p className="text-gray-800"><strong>Email:</strong> {user.connectionDetails?.emailAddress || "Not provided"}</p>
                           <p className="text-gray-800"><strong>Contact Number:</strong> {user.connectionDetails?.contactNumber|| "Not provided"}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 mb-1">Course Registrations</h3>
+                          {user.courseRegistrations && user.courseRegistrations.length > 0 ? (
+                            <div className="space-y-2">
+                              {user.courseRegistrations.map((reg: any, index: number) => (
+                                <div key={index} className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
+                                  <div>
+                                    <p className="font-medium text-sm text-blue-800">{reg.courseCode}</p>
+                                    <p className="text-xs text-blue-600">Registration: {reg.registrationNumber}</p>
+                                  </div>
+                                  <Hash size={16} className="text-blue-500" />
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-sm">No courses registered</p>
+                          )}
                         </div>
                       </div>
                       

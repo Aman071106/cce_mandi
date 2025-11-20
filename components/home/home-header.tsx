@@ -75,9 +75,8 @@ const HomeHeader: React.FC = () => {
         {/* Content Container */}
         <div className="relative z-10 flex flex-col items-start sm:items-start px-6 sm:px-16 max-w-6xl w-full">
           <div className="w-full flex justify-start py-[6px] px-0 bg-discount-gradient rounded-[10px] mb-6">
-            <p className={styles.heading1}>
-              <span className="text-white font-semibold">Center of Continuing Education</span> at{" "}
-              <span className="text-white font-semibold">IIT Mandi</span>
+            <p className={`${styles.heading1} text-white font-semibold`}>
+              CCE Fellows Network IIT Mandi
             </p>
           </div>
 
@@ -92,7 +91,7 @@ const HomeHeader: React.FC = () => {
 
           <p className={`${styles.paragraph} max-w-[650px] mt-6 mb-10`}>
             The Center of Continuing Education at IIT Mandi is dedicated to fostering continuous professional development,
-            knowledge exchange, and industry-academia collaboration through cutting-edge programs and workshops.
+            knowledge exchange, and industry -academia collaboration through cutting-edge programs and workshops.
           </p>
 
           {/* Dynamic Login/Profile Button */}

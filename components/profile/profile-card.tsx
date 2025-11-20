@@ -5,7 +5,7 @@ import { UserContext } from "@/context/user-context";
 import { useRouter } from "next/navigation";
 import { getUserDoc, updateUserDoc, fetchCourses, registerCourse, unregisterCourse, submitProfileForApproval, superDeleteUser, uploadProfilePicture, updateUserProfilePicture } from "@/lib/actions";
 import toast from "react-hot-toast";
-import { User, Mail, Phone, Briefcase, MapPin, Linkedin, Edit3, Save, X, Clock, CheckCircle, XCircle, Send, Trash2, AlertTriangle, Camera } from "lucide-react";
+import { User, Mail, Phone, Briefcase, MapPin, Linkedin, Edit3, Save, X, Clock, CheckCircle, XCircle, Send, Trash2, AlertTriangle, Camera, Hash } from "lucide-react";
 import Image from "next/image";
 import { signOutUser } from "@/firebase/firebase";
 
@@ -30,6 +30,9 @@ const ProfileCard = () => {
   const [showSuperDelete, setShowSuperDelete] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [registrationNumbers, setRegistrationNumbers] = useState<{ [key: string]: string }>({});
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [selectedCourseForRegistration, setSelectedCourseForRegistration] = useState<any>(null);
 
   useEffect(() => {
     if (!currentUserID) {
@@ -141,7 +144,7 @@ const ProfileCard = () => {
     }
   };
 
-  const handleCourseRegistration = async (courseCode: string, isRegistered: boolean) => {
+  const handleCourseRegistration = async (courseCode: string, courseName: string, isRegistered: boolean) => {
     if (userData.status === "approved" || userData.status === "pending") {
       toast.error("Cannot modify courses after submission");
       return;
@@ -150,13 +153,36 @@ const ProfileCard = () => {
     try {
       if (isRegistered) {
         await unregisterCourse(courseCode, currentUserID!);
+        await loadUserData();
       } else {
-        await registerCourse(courseCode, currentUserID!);
+        // Show modal to enter registration number
+        setSelectedCourseForRegistration({ id: courseCode, courseName });
+        setShowRegistrationModal(true);
       }
-      await loadUserData();
     } catch (error) {
       console.error(error);
       toast.error("Failed to update course registration");
+    }
+  };
+
+  const handleConfirmRegistration = async () => {
+    if (!selectedCourseForRegistration) return;
+    
+    const regNumber = registrationNumbers[selectedCourseForRegistration.id];
+    if (!regNumber || regNumber.trim() === '') {
+      toast.error("Please enter a registration number");
+      return;
+    }
+
+    try {
+      await registerCourse(selectedCourseForRegistration.id, currentUserID!, regNumber);
+      await loadUserData();
+      setShowRegistrationModal(false);
+      setSelectedCourseForRegistration(null);
+      setRegistrationNumbers(prev => ({ ...prev, [selectedCourseForRegistration.id]: '' }));
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to register course");
     }
   };
 
@@ -201,7 +227,7 @@ const ProfileCard = () => {
       toast.error("Profile is locked. Cannot edit while under review or approved.");
       return;
     }
-    
+
     setActiveSection(section);
     setIsEditing(true);
   };
@@ -216,16 +242,16 @@ const ProfileCard = () => {
     const personal = userData.personalDetails || {};
     const connection = userData.connectionDetails || {};
     const employment = userData.employmentDetails || {};
-    
-    return personal.fullName && 
-           personal.age && 
-           personal.gender &&
-           connection.contactNumber && 
-           connection.linkedIn &&
-           connection.linkedIn.includes('linkedin.com') &&
-           (employment.employmentStatus === "unemployed" || 
-            (employment.employmentStatus === "employed" && employment.industry && employment.company)) &&
-           userData.selectedCourses?.length > 0;
+
+    return personal.fullName &&
+      personal.age &&
+      personal.gender &&
+      connection.contactNumber &&
+      connection.linkedIn &&
+      connection.linkedIn.includes('linkedin.com') &&
+      (employment.employmentStatus === "unemployed" ||
+        (employment.employmentStatus === "employed" && employment.industry && employment.company)) &&
+      userData.selectedCourses?.length > 0;
   };
 
   const StatusBadge = ({ status }: { status: string }) => {
@@ -280,14 +306,14 @@ const ProfileCard = () => {
             <h3 className="text-xl font-semibold text-gray-800 capitalize">
               Edit {activeSection.replace(/([A-Z])/g, ' $1')}
             </h3>
-            <button 
+            <button
               onClick={closeEditModal}
               className="text-gray-500 hover:text-gray-700 transition-colors"
             >
               <X size={24} />
             </button>
           </div>
-          
+
           <div className="p-6">
             {activeSection === "personalDetails" && (
               <div className="space-y-4">
@@ -338,7 +364,7 @@ const ProfileCard = () => {
                 </div>
               </div>
             )}
-            
+
             {activeSection === "employmentDetails" && (
               <div className="space-y-4">
                 <div>
@@ -368,7 +394,7 @@ const ProfileCard = () => {
                     <option value="employed">Employed</option>
                   </select>
                 </div>
-                
+
                 {editableData.employmentDetails?.employmentStatus === "employed" && (
                   <>
                     <div>
@@ -421,7 +447,7 @@ const ProfileCard = () => {
                 )}
               </div>
             )}
-            
+
             {activeSection === "connectionDetails" && (
               <div className="space-y-4">
                 <div>
@@ -468,7 +494,7 @@ const ProfileCard = () => {
               </div>
             )}
           </div>
-          
+
           <div className="flex justify-end gap-3 p-6 border-t">
             <button
               onClick={closeEditModal}
@@ -491,9 +517,11 @@ const ProfileCard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+
+
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
-          <div className="relative h-48 bg-gradient-to-r from-slate-800 to-gray-900">
+          <div className="relative h-40 ">
             <div className="absolute bottom-0 left-8 transform translate-y-1/2">
               <div className="relative">
                 <div className="w-32 h-32 rounded-full border-4 border-white bg-white overflow-hidden shadow-lg">
@@ -511,7 +539,7 @@ const ProfileCard = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Camera button for upload */}
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -525,7 +553,7 @@ const ProfileCard = () => {
                     <Camera size={20} />
                   )}
                 </button>
-                
+
                 {/* Hidden file input */}
                 <input
                   ref={fileInputRef}
@@ -548,35 +576,30 @@ const ProfileCard = () => {
                   {userData.status && <StatusBadge status={userData.status} />}
                 </div>
                 <p className="text-gray-600">
-                  {userData.employmentDetails?.employmentStatus === "employed" 
-                    ? `${userData.employmentDetails.company || "Company"} • ${userData.employmentDetails.location || "Location"}` 
+                  {userData.employmentDetails?.employmentStatus === "employed"
+                    ? `${userData.employmentDetails.company || "Company"} • ${userData.employmentDetails.location || "Location"}`
                     : userData.employmentDetails?.employmentStatus === "unemployed"
-                    ? "Unemployed"
-                    : "Employment information not provided"}
+                      ? "Unemployed"
+                      : "Employment information not provided"}
                 </p>
               </div>
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={() => openEditSection("personalDetails")}
                   disabled={userData.status === "approved" || userData.status === "pending"}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-sm ${
-                    userData.status === "approved" || userData.status === "pending"
-                      ? "bg-gray-400 text-gray-200 cursor-not-allowed" 
-                      : "bg-slate-800 text-white hover:bg-slate-900"
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-sm ${userData.status === "approved" || userData.status === "pending"
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : "bg-slate-800 text-white hover:bg-slate-900"
+                    }`}
                 >
                   <Edit3 size={18} />
                   Edit Profile
                 </button>
-                <button 
-                  onClick={() => setShowSuperDelete(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors shadow-sm"
-                >
-                  <Trash2 size={18} />
-                  Super Delete
-                </button>
+
               </div>
             </div>
+
+           
 
             {(userData.status === "draft" || userData.status === "rejected") && (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -597,11 +620,10 @@ const ProfileCard = () => {
                   <button
                     onClick={handleSubmitForApproval}
                     disabled={!isProfileComplete() || isSubmitting}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                      isProfileComplete() 
-                        ? "bg-green-600 text-white hover:bg-green-700" 
-                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${isProfileComplete()
+                      ? "bg-green-600 text-white hover:bg-green-700"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }`}
                   >
                     <Send size={18} />
                     {isSubmitting ? "Submitting..." : "Submit for Approval"}
@@ -628,14 +650,13 @@ const ProfileCard = () => {
                     <User size={20} className="text-slate-600" />
                     Personal Details
                   </h2>
-                  <button 
+                  <button
                     onClick={() => openEditSection("personalDetails")}
                     disabled={userData.status === "approved" || userData.status === "pending"}
-                    className={`p-1 rounded transition-colors ${
-                      userData.status === "approved" || userData.status === "pending"
-                        ? "text-gray-400 cursor-not-allowed" 
-                        : "text-slate-600 hover:text-slate-800 hover:bg-slate-200"
-                    }`}
+                    className={`p-1 rounded transition-colors ${userData.status === "approved" || userData.status === "pending"
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-slate-600 hover:text-slate-800 hover:bg-slate-200"
+                      }`}
                   >
                     <Edit3 size={18} />
                   </button>
@@ -668,14 +689,13 @@ const ProfileCard = () => {
                     <Briefcase size={20} className="text-slate-600" />
                     Employment Details
                   </h2>
-                  <button  
+                  <button
                     onClick={() => openEditSection("employmentDetails")}
                     disabled={userData.status === "approved" || userData.status === "pending"}
-                    className={`p-1 rounded transition-colors ${
-                      userData.status === "approved" || userData.status === "pending"
-                        ? "text-gray-400 cursor-not-allowed" 
-                        : "text-slate-600 hover:text-slate-800 hover:bg-slate-200"
-                    }`}
+                    className={`p-1 rounded transition-colors ${userData.status === "approved" || userData.status === "pending"
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-slate-600 hover:text-slate-800 hover:bg-slate-200"
+                      }`}
                   >
                     <Edit3 size={18} />
                   </button>
@@ -719,14 +739,13 @@ const ProfileCard = () => {
                     <Phone size={20} className="text-slate-600" />
                     Connection Details
                   </h2>
-                  <button 
+                  <button
                     onClick={() => openEditSection("connectionDetails")}
                     disabled={userData.status === "approved" || userData.status === "pending"}
-                    className={`p-1 rounded transition-colors ${
-                      userData.status === "approved" || userData.status === "pending"
-                        ? "text-gray-400 cursor-not-allowed" 
-                        : "text-slate-600 hover:text-slate-800 hover:bg-slate-200"
-                    }`}
+                    className={`p-1 rounded transition-colors ${userData.status === "approved" || userData.status === "pending"
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-slate-600 hover:text-slate-800 hover:bg-slate-200"
+                      }`}
                   >
                     <Edit3 size={18} />
                   </button>
@@ -748,9 +767,9 @@ const ProfileCard = () => {
                   <div className="md:col-span-2">
                     <p className="text-sm text-gray-500 mb-1">LinkedIn Profile {!userData.connectionDetails?.linkedIn && <span className="text-red-500">*</span>}</p>
                     {userData.connectionDetails?.linkedIn ? (
-                      <a 
-                        href={userData.connectionDetails.linkedIn} 
-                        target="_blank" 
+                      <a
+                        href={userData.connectionDetails.linkedIn}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-slate-700 hover:text-slate-900 hover:underline flex items-center gap-1 font-medium"
                       >
@@ -766,11 +785,8 @@ const ProfileCard = () => {
 
               {/* Courses Registration Card */}
               <div className="bg-slate-50 rounded-xl p-6 border border-gray-100 md:col-span-2">
-                <h2 className="text-xl font-semibold text-gray-800 mb-2">Course Registration</h2>
-                <p className="text-sm text-gray-600 mb-4">
-                  Enrollment Number: <span className="font-mono font-semibold">{userData.personalDetails?.enrollmentNumber || "Not generated"}</span>
-                </p>
-                
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Course Registration</h2>
+
                 {(userData.status === "approved" || userData.status === "pending") && (
                   <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <p className="text-yellow-800 text-sm">
@@ -792,22 +808,29 @@ const ProfileCard = () => {
                 ) : (
                   <div className="space-y-3">
                     {courses.map(course => {
-                      const isRegistered = userData.selectedCourses?.includes(course.id);
+                      const courseRegistration = userData.courseRegistrations?.find(
+                        (reg: any) => reg.courseCode === course.id
+                      );
+                      const isRegistered = !!courseRegistration;
 
                       return (
-                        <div key={course.id} className="flex justify-between items-center p-3 border rounded-lg bg-white">
-                          <div>
+                        <div key={course.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-4 border rounded-lg bg-white">
+                          <div className="flex-1">
                             <p className="font-medium text-gray-800">{course.courseName}</p>
                             <p className="text-sm text-gray-500">{course.id}</p>
+                            {isRegistered && courseRegistration.registrationNumber && (
+                              <p className="text-xs text-green-700 mt-1 font-mono bg-green-50 inline-block px-2 py-1 rounded">
+                                Reg. No: {courseRegistration.registrationNumber}
+                              </p>
+                            )}
                           </div>
                           <button
-                            onClick={() => handleCourseRegistration(course.id, isRegistered)}
+                            onClick={() => handleCourseRegistration(course.id, course.courseName, isRegistered)}
                             disabled={userData.status === "approved" || userData.status === "pending"}
-                            className={`px-4 py-2 rounded-lg text-white transition-colors ${
-                              isRegistered 
-                                ? "bg-red-600 hover:bg-red-700" 
-                                : "bg-slate-800 hover:bg-slate-900"
-                            } ${(userData.status === "approved" || userData.status === "pending") ? "opacity-50 cursor-not-allowed" : ""}`}
+                            className={`px-4 py-2 rounded-lg text-white transition-colors whitespace-nowrap ${isRegistered
+                              ? "bg-red-600 hover:bg-red-700"
+                              : "bg-slate-800 hover:bg-slate-900"
+                              } ${(userData.status === "approved" || userData.status === "pending") ? "opacity-50 cursor-not-allowed" : ""}`}
                           >
                             {isRegistered ? "Unregister" : "Register"}
                           </button>
@@ -817,13 +840,74 @@ const ProfileCard = () => {
                   </div>
                 )}
               </div>
+              {/* Super Delete Button at Bottom */}
+              <div className="mt-10 flex justify-center md:col-span-2">
+                <button
+                  onClick={() => setShowSuperDelete(true)}
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors shadow-md"
+                >
+                  <Trash2 size={20} />
+                  Super Delete Account
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Edit Modal */}
       {isEditing && renderEditModal()}
+
+      {/* Course Registration Modal */}
+      {showRegistrationModal && selectedCourseForRegistration && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Register for {selectedCourseForRegistration.courseName}
+              </h3>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Registration Number *
+                </label>
+                <input
+                  type="text"
+                  value={registrationNumbers[selectedCourseForRegistration.id] || ''}
+                  onChange={(e) => setRegistrationNumbers(prev => ({
+                    ...prev,
+                    [selectedCourseForRegistration.id]: e.target.value
+                  }))}
+                  placeholder="e.g., REG2024001"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter your course-specific registration number
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowRegistrationModal(false);
+                    setSelectedCourseForRegistration(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmRegistration}
+                  className="flex-1 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors font-semibold"
+                >
+                  Confirm Registration
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Super Delete Confirmation Modal */}
       {showSuperDelete && (
@@ -834,7 +918,7 @@ const ProfileCard = () => {
                 <AlertTriangle size={32} className="text-red-600" />
                 <h3 className="text-xl font-bold text-gray-900">Super Delete Account</h3>
               </div>
-              
+
               <div className="mb-6">
                 <p className="text-gray-700 mb-4 font-semibold">
                   ⚠️ WARNING: This action will PERMANENTLY delete:
@@ -849,7 +933,7 @@ const ProfileCard = () => {
                   This action CANNOT be undone!
                 </p>
               </div>
-              
+
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowSuperDelete(false)}

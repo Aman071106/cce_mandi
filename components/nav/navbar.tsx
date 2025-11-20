@@ -146,19 +146,21 @@ const Navbar = () => {
             <Link href="/" className={`transition-colors pb-1 ${isActiveLink("/")}`}>
               Home
             </Link>
-            <Link href="/contact" className={`transition-colors pb-1 ${isActiveLink("/contact")}`}>
-              Contact
-            </Link>
+            
             {currentUserID && (
               <>
-                <Link href="/forum" className={`transition-colors pb-1 ${isActiveLink("/forum")}`}>
-                  Forum
-                </Link>
+                
                 <Link href="/fellows" className={`transition-colors pb-1 ${isActiveLink("/fellows")}`}>
                   Fellows
                 </Link>
+                <Link href="/forum" className={`transition-colors pb-1 ${isActiveLink("/forum")}`}>
+                  Forum
+                </Link>
               </>
             )}
+            <Link href="/contact" className={`transition-colors pb-1 ${isActiveLink("/contact")}`}>
+              Contact
+            </Link>
           </div>
         </div>
 
@@ -321,16 +323,17 @@ const Navbar = () => {
           Home
         </Link>
         
-        <Link 
-          href="/contact" 
-          className={`py-2 transition-colors ${isActiveLink("/contact")}`}
-          onClick={() => setToggle(false)}
-        >
-          Contact
-        </Link>
+        
         
         {currentUserID && (
           <>
+           <Link 
+              href="/fellows" 
+              className={`py-2 transition-colors ${isActiveLink("/fellows")}`}
+              onClick={() => setToggle(false)}
+            >
+              Fellows
+            </Link>
             <Link 
               href="/forum" 
               className={`py-2 transition-colors ${isActiveLink("/forum")}`}
@@ -339,13 +342,7 @@ const Navbar = () => {
               Forum
             </Link>
             
-            <Link 
-              href="/fellows" 
-              className={`py-2 transition-colors ${isActiveLink("/fellows")}`}
-              onClick={() => setToggle(false)}
-            >
-              Fellows
-            </Link>
+           
             
             <Link 
               href="/profile" 
@@ -365,7 +362,18 @@ const Navbar = () => {
               </Link>
             )}
             
-            <button
+           
+          </>
+        )}
+        <Link 
+          href="/contact" 
+          className={`py-2 transition-colors ${isActiveLink("/contact")}`}
+          onClick={() => setToggle(false)}
+        >
+          Contact
+        </Link>
+        {currentUserID &&(
+           <button
               onClick={async () => {
                 await logoutUser();
                 setToggle(false);
@@ -373,10 +381,7 @@ const Navbar = () => {
               className="text-left py-2 text-red-600 hover:text-red-800 transition-colors flex items-center gap-2 font-medium"
             >
               Logout
-            </button>
-          </>
-        )}
-        
+            </button>)}
         {!currentUserID && (
           <button
             onClick={async () => {

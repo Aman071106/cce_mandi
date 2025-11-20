@@ -1,7 +1,7 @@
 import { User } from "firebase/auth";
 import { db } from "@/firebase/firebase";
 import toast from "react-hot-toast";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, addDoc, query, where, orderBy, serverTimestamp, runTransaction } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, addDoc, query, where, orderBy, serverTimestamp, runTransaction, arrayUnion, arrayRemove } from "firebase/firestore";
 
 // Generate unique enrollment number
 const generateEnrollmentNumber = async (): Promise<string> => {
@@ -44,7 +44,7 @@ export const createUserDoc = async (userDoc: User) => {
           fullName: "",
           age: "",
           gender: "male",
-          profileImage: null, // ✅ Add this with null value
+          profileImage: null,
         },
         employmentDetails: {
           company: "",
@@ -56,6 +56,7 @@ export const createUserDoc = async (userDoc: User) => {
           emailAddress: userDoc.email || "",
         },
         selectedCourses: [],
+        courseRegistrations: [], // New field to store course registrations with reg numbers
         profileSubmitted: false,
         submissionDate: null,
         lastEditDate: null,
@@ -128,8 +129,8 @@ export const submitProfileForApproval = async (userID: string) => {
     throw new Error("Please complete all connection details");
   }
   
-  if (!userData.selectedCourses || userData.selectedCourses.length === 0) {
-    throw new Error("Please select at least one course");
+  if (!userData.courseRegistrations || userData.courseRegistrations.length === 0) {
+    throw new Error("Please register for at least one course");
   }
   
   try {
@@ -144,7 +145,6 @@ export const submitProfileForApproval = async (userID: string) => {
     console.log(e);
   }
 };
-// Add this function to lib/actions.ts
 
 // Upload profile picture to Cloudinary
 export const uploadProfilePicture = async (file: File): Promise<string> => {
@@ -185,6 +185,7 @@ export const updateUserProfilePicture = async (userID: string, imageUrl: string)
     throw error;
   }
 };
+
 // Fetch all pending users
 interface PendingUser {
   id: string;
@@ -206,28 +207,55 @@ interface PendingUser {
     emailAddress: string;
   };
   selectedCourses: string[];
+  courseRegistrations: Array<{
+    courseCode: string;
+    registrationNumber: string;
+  }>;
 }
 
+// Fetch all pending users
 export const fetchPendingUsers = async () => {
-  const usersCol = collection(db, "users");
-  const usersSnapshot = await getDocs(usersCol);
-  const pendingUsers: PendingUser[] = [];
-  
-  usersSnapshot.forEach(docSnap => {
-    const data = docSnap.data();
-    if (data.status === "pending") {
+  try {
+    const usersCol = collection(db, "users");
+    // Use Firestore query to only get pending users
+    const pendingQuery = query(usersCol, where("status", "==", "pending"));
+    const usersSnapshot = await getDocs(pendingQuery);
+    
+    const pendingUsers: PendingUser[] = [];
+    
+    usersSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
       pendingUsers.push({
         id: docSnap.id,
         email: data.email || "",
         status: data.status || "",
-        personalDetails: data.personalDetails || { enrollmentNumber: "", fullName: "", age: "", gender: "male" },
-        employmentDetails: data.employmentDetails || { company: "", location: "" },
-        connectionDetails: data.connectionDetails || { linkedIn: "", contactNumber: "", emailAddress: "" },
-        selectedCourses: data.selectedCourses || []
+        personalDetails: data.personalDetails || { 
+          enrollmentNumber: "", 
+          fullName: "", 
+          age: "", 
+          gender: "male" 
+        },
+        employmentDetails: data.employmentDetails || { 
+          company: "", 
+          location: "" 
+        },
+        connectionDetails: data.connectionDetails || { 
+          linkedIn: "", 
+          contactNumber: "", 
+          emailAddress: "" 
+        },
+        selectedCourses: data.selectedCourses || [],
+        courseRegistrations: data.courseRegistrations || []
       });
-    }
-  });
-  return pendingUsers;
+    });
+    
+    console.log(`Found ${pendingUsers.length} pending users`);
+    return pendingUsers;
+  } catch (error) {
+    console.error("Error fetching pending users:", error);
+    toast.error("Failed to fetch pending users");
+    return [];
+  }
 };
 
 // Approve user
@@ -253,17 +281,36 @@ export const addCourse = async (courseCode: string, courseName: string) => {
   await setDoc(courseRef, { courseName, enrolledEmails: [] });
 };
 
-// Register user for course
-export const registerCourse = async (courseCode: string, userID: string) => {
+// Register user for course with registration number
+export const registerCourse = async (courseCode: string, userID: string, registrationNumber: string) => {
   const userDocRef = doc(db, "users", userID);
   const userData = await getUserDoc(userID);
   
+  // Check if already registered for this course
+  const courseRegistrations = userData.courseRegistrations || [];
+  const alreadyRegistered = courseRegistrations.some((reg: any) => reg.courseCode === courseCode);
+  
+  if (alreadyRegistered) {
+    toast.error("Already registered for this course");
+    return;
+  }
+  
+  // Add to courseRegistrations array
+  const newRegistration = {
+    courseCode: courseCode,
+    registrationNumber: registrationNumber
+  };
+  
+  // Also maintain selectedCourses for backward compatibility
   const selectedCourses = userData.selectedCourses || [];
   if (!selectedCourses.includes(courseCode)) {
     selectedCourses.push(courseCode);
   }
   
-  await updateDoc(userDocRef, { selectedCourses });
+  await updateDoc(userDocRef, {
+    courseRegistrations: arrayUnion(newRegistration),
+    selectedCourses: selectedCourses
+  });
   
   // Also add to course's enrolled emails
   const courseRef = doc(db, "courses", courseCode);
@@ -285,10 +332,31 @@ export const unregisterCourse = async (courseCode: string, userID: string) => {
   const userDocRef = doc(db, "users", userID);
   const userData = await getUserDoc(userID);
   
+  // Remove from courseRegistrations
+  const courseRegistrations = userData.courseRegistrations || [];
+  const updatedRegistrations = courseRegistrations.filter((reg: any) => reg.courseCode !== courseCode);
+  
+  // Remove from selectedCourses for backward compatibility
   const selectedCourses = userData.selectedCourses || [];
   const updatedCourses = selectedCourses.filter((course: string) => course !== courseCode);
   
-  await updateDoc(userDocRef, { selectedCourses: updatedCourses });
+  await updateDoc(userDocRef, {
+    courseRegistrations: updatedRegistrations,
+    selectedCourses: updatedCourses
+  });
+  
+  // Remove from course's enrolled emails
+  const courseRef = doc(db, "courses", courseCode);
+  const courseSnap = await getDoc(courseRef);
+  if (courseSnap.exists()) {
+    const enrolledEmails = courseSnap.data().enrolledEmails || [];
+    const userEmail = userData.connectionDetails?.emailAddress;
+    if (userEmail) {
+      const updatedEmails = enrolledEmails.filter((email: string) => email !== userEmail);
+      await updateDoc(courseRef, { enrolledEmails: updatedEmails });
+    }
+  }
+  
   toast.success("Course unregistered successfully!");
 };
 
@@ -329,7 +397,8 @@ export const fetchAllUsers = async () => {
         personalDetails: data.personalDetails || { enrollmentNumber: "", fullName: "", age: "", gender: "male" },
         employmentDetails: data.employmentDetails || { company: "", location: "" },
         connectionDetails: data.connectionDetails || { linkedIn: "", contactNumber: "", emailAddress: "" },
-        selectedCourses: data.selectedCourses || []
+        selectedCourses: data.selectedCourses || [],
+        courseRegistrations: data.courseRegistrations || []
       });
     }
   });

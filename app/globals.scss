@@ -6,21 +6,23 @@ body {
   @apply bg-zinc-100 text-zinc-900 font-normal text-base w-screen relative overflow-x-hidden scroll-smooth
 }
 
+/* Hide scrollbar for Chrome, Safari, Edge */
 ::-webkit-scrollbar {
-  @apply w-2.5
+  width: 0 !important;
+  height: 0 !important;
 }
 
-::-webkit-scrollbar-track {
-  @apply bg-zinc-100
-}
-
+/* Hide scrollbar track & thumb */
+::-webkit-scrollbar-track,
 ::-webkit-scrollbar-thumb {
-  @apply bg-amber-500
+  background: transparent !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-amber-600
+/* Hide scrollbar for Firefox */
+html {
+  scrollbar-width: none;
 }
+
 
 @layer utilities {
   .text-balance {

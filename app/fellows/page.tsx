@@ -4,7 +4,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { fetchAllUsers, fetchCourses, sendConnectionRequest, getConnections, getConnectionRequests, acceptConnectionRequest, rejectConnectionRequest } from "@/lib/actions";
 import { UserContext } from "@/context/user-context";
 import toast from "react-hot-toast";
-import { RefreshCw, Search, Mail, Phone, Linkedin, Filter, ChevronLeft, ChevronRight, Check, X, MapPin, GraduationCap } from "lucide-react";
+import { RefreshCw, Search, Mail, Phone, Linkedin, Filter, ChevronLeft, ChevronRight, Check, X, MapPin, GraduationCap, Users } from "lucide-react";
 
 const INDUSTRIES = [
   "AI and Data Science",
@@ -25,6 +25,7 @@ const FellowsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [showOnlyConnections, setShowOnlyConnections] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [connections, setConnections] = useState<any[]>([]);
   const [connectionRequests, setConnectionRequests] = useState<any[]>([]);
@@ -36,7 +37,10 @@ const FellowsPage = () => {
     try {
       setRefreshing(true);
       const users = await fetchAllUsers();
-      const filteredUsers = users.filter(user => user.id !== currentUserID);
+      // Filter out current user and only show approved users
+      const filteredUsers = users.filter(user => 
+        user.id !== currentUserID && user.status === "approved"
+      );
       setAllUsers(filteredUsers);
       setFilteredUsers(filteredUsers);
     } catch (e) {
@@ -87,6 +91,14 @@ const FellowsPage = () => {
     loadConnectionRequests();
   }, [currentUserID]);
 
+  const isConnected = (userId: string) => {
+    return connections.some(
+      conn => conn.status === "accepted" &&
+        ((conn.fromUserId === currentUserID && conn.toUserId === userId) ||
+          (conn.fromUserId === userId && conn.toUserId === currentUserID))
+    );
+  };
+
   useEffect(() => {
     let filtered = [...allUsers];
 
@@ -110,9 +122,14 @@ const FellowsPage = () => {
       );
     }
 
+    // Filter to show only connections
+    if (showOnlyConnections) {
+      filtered = filtered.filter(user => isConnected(user.id));
+    }
+
     setFilteredUsers(filtered);
     setCurrentPage(1);
-  }, [searchTerm, selectedCourses, selectedIndustries, allUsers]);
+  }, [searchTerm, selectedCourses, selectedIndustries, showOnlyConnections, allUsers, connections, currentUserID]);
 
   const handleCourseFilter = (courseId: string) => {
     setSelectedCourses(prev =>
@@ -134,6 +151,7 @@ const FellowsPage = () => {
     setSelectedCourses([]);
     setSelectedIndustries([]);
     setSearchTerm("");
+    setShowOnlyConnections(false);
   };
 
   const handleConnect = async (userId: string) => {
@@ -206,14 +224,6 @@ const FellowsPage = () => {
     return value ? value : "—";
   };
 
-  const isConnected = (userId: string) => {
-    return connections.some(
-      conn => conn.status === "accepted" &&
-        ((conn.fromUserId === currentUserID && conn.toUserId === userId) ||
-          (conn.fromUserId === userId && conn.toUserId === currentUserID))
-    );
-  };
-
   const hasPendingRequest = (userId: string) => {
     return connections.some(
       conn => conn.status === "pending" &&
@@ -222,13 +232,15 @@ const FellowsPage = () => {
     );
   };
 
+  const connectedUsersCount = allUsers.filter(user => isConnected(user.id)).length;
+
   return (
     <div className="no-scrollbar min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 mt-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Fellows Directory</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Fellows</h1>
             <p className="text-gray-600 mt-1">Connect with approved members ({filteredUsers.length} fellows)</p>
           </div>
           <button
@@ -294,18 +306,36 @@ const FellowsPage = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                 />
               </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Filter size={18} />
-                Filters
-                {(selectedCourses.length > 0 || selectedIndustries.length > 0) && (
-                  <span className="bg-slate-800 text-white text-xs rounded-full px-2 py-0.5">
-                    {selectedCourses.length + selectedIndustries.length}
-                  </span>
-                )}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowOnlyConnections(!showOnlyConnections)}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+                    showOnlyConnections
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <Users size={18} />
+                  My Connections
+                  {showOnlyConnections && (
+                    <span className="bg-white text-blue-600 text-xs rounded-full px-2 py-0.5">
+                      {connectedUsersCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Filter size={18} />
+                  Filters
+                  {(selectedCourses.length > 0 || selectedIndustries.length > 0) && (
+                    <span className="bg-slate-800 text-white text-xs rounded-full px-2 py-0.5">
+                      {selectedCourses.length + selectedIndustries.length}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {showFilters && (
@@ -346,7 +376,7 @@ const FellowsPage = () => {
                   </div>
                 </div>
 
-                {(selectedCourses.length > 0 || selectedIndustries.length > 0) && (
+                {(selectedCourses.length > 0 || selectedIndustries.length > 0 || showOnlyConnections) && (
                   <button
                     onClick={clearFilters}
                     className="text-red-600 hover:text-red-800 text-sm font-medium"
@@ -367,8 +397,8 @@ const FellowsPage = () => {
             </div>
           ) : currentUsers.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {searchTerm || selectedCourses.length > 0 || selectedIndustries.length > 0
-                ? "No fellows match your search criteria"
+              {searchTerm || selectedCourses.length > 0 || selectedIndustries.length > 0 || showOnlyConnections
+                ? "No approved fellows match your search criteria"
                 : "No approved fellows found"}
             </div>
           ) : (
@@ -537,7 +567,7 @@ const FellowsPage = () => {
               )}
 
               <div className="mt-4 text-center text-sm text-gray-600">
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} fellows
+                Showing {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} approved fellows
               </div>
             </>
           )}
