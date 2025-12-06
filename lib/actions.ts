@@ -47,7 +47,8 @@ export const createUserDoc = async (userDoc: User) => {
           profileImage: null,
         },
         employmentDetails: {
-          company: "",
+          employmentStatus: "unemployed",
+          industry: "",
           location: "",
         },
         connectionDetails: {
@@ -56,7 +57,7 @@ export const createUserDoc = async (userDoc: User) => {
           emailAddress: userDoc.email || "",
         },
         selectedCourses: [],
-        courseRegistrations: [], // New field to store course registrations with reg numbers
+        courseRegistrations: [],
         profileSubmitted: false,
         submissionDate: null,
         lastEditDate: null,
@@ -69,6 +70,7 @@ export const createUserDoc = async (userDoc: User) => {
 
   return userDocRef;
 };
+
 
 // Fetch user data
 export const getUserDoc = async (userID: string) => {
@@ -198,7 +200,8 @@ interface PendingUser {
     gender: string;
   };
   employmentDetails: {
-    company: string;
+    employmentStatus: string;
+    industry: string;
     location: string;
   };
   connectionDetails: {
@@ -236,7 +239,8 @@ export const fetchPendingUsers = async () => {
           gender: "male"
         },
         employmentDetails: data.employmentDetails || {
-          company: "",
+          employmentStatus: "unemployed",
+          industry: "",
           location: ""
         },
         connectionDetails: data.connectionDetails || {
@@ -395,7 +399,11 @@ export const fetchAllUsers = async () => {
         email: data.email || "",
         status: data.status || "",
         personalDetails: data.personalDetails || { enrollmentNumber: "", fullName: "", age: "", gender: "male" },
-        employmentDetails: data.employmentDetails || { company: "", location: "" },
+        employmentDetails: data.employmentDetails || {
+          employmentStatus: "unemployed",
+          industry: "",
+          location: ""
+        },
         connectionDetails: data.connectionDetails || { linkedIn: "", contactNumber: "", emailAddress: "" },
         selectedCourses: data.selectedCourses || [],
         courseRegistrations: data.courseRegistrations || []
@@ -1001,7 +1009,8 @@ export const fetchAllUsersForAdmin = async () => {
             gender: "male"
           },
           employmentDetails: data.employmentDetails || {
-            company: "",
+            employmentStatus: "unemployed",
+            industry: "",
             location: ""
           },
           connectionDetails: data.connectionDetails || {

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { fetchAllUsers, fetchCourses, sendConnectionRequest, getConnections, getConnectionRequests, acceptConnectionRequest, rejectConnectionRequest } from "@/lib/actions";
 import { UserContext } from "@/context/user-context";
 import toast from "react-hot-toast";
-import { RefreshCw, Search, Mail, Phone, Linkedin, Filter, ChevronLeft, ChevronRight, Check, X, MapPin, GraduationCap, Users } from "lucide-react";
+import { RefreshCw, Search, Mail, Phone, Linkedin, Filter, ChevronLeft, ChevronRight, Check, X, MapPin, GraduationCap, Users, Briefcase, Clock, UserCheck } from "lucide-react";
 import { FaUser } from "react-icons/fa";
 
 const INDUSTRIES = [
@@ -13,6 +13,13 @@ const INDUSTRIES = [
   "NLP",
   "Machine Learning",
   "Generative AI"
+];
+
+const CONNECTION_STATUSES = [
+  { value: "all", label: "All Users" },
+  { value: "connected", label: "Connected" },
+  { value: "pending", label: "Pending" },
+  { value: "not_connected", label: "Not Connected" }
 ];
 
 const ITEMS_PER_PAGE = 9; // 3x3 grid for larger cards
@@ -26,7 +33,7 @@ const FellowsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [showOnlyConnections, setShowOnlyConnections] = useState(false);
+  const [connectionStatusFilter, setConnectionStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [connections, setConnections] = useState<any[]>([]);
   const [connectionRequests, setConnectionRequests] = useState<any[]>([]);
@@ -38,12 +45,14 @@ const FellowsPage = () => {
     try {
       setRefreshing(true);
       const users = await fetchAllUsers();
-      // Filter out current user and only show approved users
-      const filteredUsers = users.filter(user =>
-        user.id !== currentUserID && user.status === "approved"
+      // Only show approved/verified users, excluding the current user
+      // fetchAllUsers already filters for approved users, but we double-check here
+      const verifiedUsers = users.filter(user =>
+        user.id !== currentUserID && 
+        user.status === "approved"
       );
-      setAllUsers(filteredUsers);
-      setFilteredUsers(filteredUsers);
+      setAllUsers(verifiedUsers);
+      setFilteredUsers(verifiedUsers);
     } catch (e) {
       toast.error("Failed to fetch users");
       console.error(e);
@@ -100,37 +109,69 @@ const FellowsPage = () => {
     );
   };
 
+  const hasPendingRequest = (userId: string) => {
+    return connections.some(
+      conn => conn.status === "pending" &&
+        conn.fromUserId === currentUserID &&
+        conn.toUserId === userId
+    );
+  };
+
+  const hasReceivedRequest = (userId: string) => {
+    return connections.some(
+      conn => conn.status === "pending" &&
+        conn.fromUserId === userId &&
+        conn.toUserId === currentUserID
+    );
+  };
+
+  const getConnectionStatus = (userId: string): "connected" | "pending" | "not_connected" => {
+    if (isConnected(userId)) return "connected";
+    if (hasPendingRequest(userId) || hasReceivedRequest(userId)) return "pending";
+    return "not_connected";
+  };
+
   useEffect(() => {
     let filtered = [...allUsers];
 
+    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(user =>
         user.personalDetails?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.connectionDetails?.emailAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.employmentDetails?.company?.toLowerCase().includes(searchTerm.toLowerCase())
+        user.employmentDetails?.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.employmentDetails?.industry?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.employmentDetails?.location?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
+    // Course filter
     if (selectedCourses.length > 0) {
       filtered = filtered.filter(user =>
         user.selectedCourses?.some((course: string) => selectedCourses.includes(course))
       );
     }
 
+    // Industry filter
     if (selectedIndustries.length > 0) {
-      filtered = filtered.filter(user =>
-        selectedIndustries.includes(user.employmentDetails?.industry)
-      );
+      filtered = filtered.filter(user => {
+        const userIndustry = user.employmentDetails?.industry;
+        // Only include users who have an industry set and it matches the selected industries
+        return userIndustry && selectedIndustries.includes(userIndustry);
+      });
     }
 
-    // Filter to show only connections
-    if (showOnlyConnections) {
-      filtered = filtered.filter(user => isConnected(user.id));
+    // Connection status filter
+    if (connectionStatusFilter !== "all") {
+      filtered = filtered.filter(user => {
+        const status = getConnectionStatus(user.id);
+        return status === connectionStatusFilter;
+      });
     }
 
     setFilteredUsers(filtered);
     setCurrentPage(1);
-  }, [searchTerm, selectedCourses, selectedIndustries, showOnlyConnections, allUsers, connections, currentUserID]);
+  }, [searchTerm, selectedCourses, selectedIndustries, connectionStatusFilter, allUsers, connections, currentUserID]);
 
   const handleCourseFilter = (courseId: string) => {
     setSelectedCourses(prev =>
@@ -152,7 +193,7 @@ const FellowsPage = () => {
     setSelectedCourses([]);
     setSelectedIndustries([]);
     setSearchTerm("");
-    setShowOnlyConnections(false);
+    setConnectionStatusFilter("all");
   };
 
   const handleConnect = async (userId: string) => {
@@ -161,35 +202,17 @@ const FellowsPage = () => {
       return;
     }
 
-    const isConnected = connections.some(
-      conn => conn.status === "accepted" &&
-        ((conn.fromUserId === currentUserID && conn.toUserId === userId) ||
-          (conn.fromUserId === userId && conn.toUserId === currentUserID))
-    );
-
-    if (isConnected) {
+    if (isConnected(userId)) {
       toast.error("Already connected");
       return;
     }
 
-    const requestSent = connections.some(
-      conn => conn.status === "pending" &&
-        conn.fromUserId === currentUserID &&
-        conn.toUserId === userId
-    );
-
-    if (requestSent) {
+    if (hasPendingRequest(userId)) {
       toast.error("Connection request already sent");
       return;
     }
 
-    const pendingRequest = connections.some(
-      conn => conn.status === "pending" &&
-        conn.fromUserId === userId &&
-        conn.toUserId === currentUserID
-    );
-
-    if (pendingRequest) {
+    if (hasReceivedRequest(userId)) {
       toast.error("This user has already sent you a connection request. Check your notifications.");
       return;
     }
@@ -225,15 +248,20 @@ const FellowsPage = () => {
     return value ? value : "—";
   };
 
-  const hasPendingRequest = (userId: string) => {
-    return connections.some(
-      conn => conn.status === "pending" &&
-        conn.fromUserId === currentUserID &&
-        conn.toUserId === userId
-    );
+  const connectedUsersCount = allUsers.filter(user => isConnected(user.id)).length;
+  const pendingUsersCount = allUsers.filter(user => hasPendingRequest(user.id) || hasReceivedRequest(user.id)).length;
+  const notConnectedUsersCount = allUsers.filter(user => getConnectionStatus(user.id) === "not_connected").length;
+
+  const getStatusCounts = () => {
+    return {
+      all: allUsers.length,
+      connected: connectedUsersCount,
+      pending: pendingUsersCount,
+      not_connected: notConnectedUsersCount
+    };
   };
 
-  const connectedUsersCount = allUsers.filter(user => isConnected(user.id)).length;
+  const statusCounts = getStatusCounts();
 
   return (
     <div className="no-scrollbar min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 mt-10 px-4 sm:px-6 lg:px-8">
@@ -242,6 +270,7 @@ const FellowsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Fellows</h1>
+            <p className="text-sm text-gray-600 mt-1">Connect with verified members of the community</p>
           </div>
           <button
             onClick={() => {
@@ -300,41 +329,52 @@ const FellowsPage = () => {
                 <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by name, email, or industry..."
+                  placeholder="Search by name, email, industry, location..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                 />
               </div>
-              <div className="flex gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Filter size={18} />
+                Filters
+                {(selectedCourses.length > 0 || selectedIndustries.length > 0 || connectionStatusFilter !== "all") && (
+                  <span className="bg-slate-800 text-white text-xs rounded-full px-2 py-0.5">
+                    {selectedCourses.length + selectedIndustries.length + (connectionStatusFilter !== "all" ? 1 : 0)}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Connection Status Filter Pills */}
+            <div className="flex flex-wrap gap-2">
+              {CONNECTION_STATUSES.map(status => (
                 <button
-                  onClick={() => setShowOnlyConnections(!showOnlyConnections)}
-                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${showOnlyConnections
+                  key={status.value}
+                  onClick={() => setConnectionStatusFilter(status.value)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    connectionStatusFilter === status.value
                       ? "bg-blue-600 text-white border-blue-600"
-                      : "border-gray-300 hover:bg-gray-50"
-                    }`}
+                      : "border border-gray-300 hover:bg-gray-50"
+                  }`}
                 >
-                  <Users size={18} />
-                  My Connections
-                  {showOnlyConnections && (
-                    <span className="bg-white text-blue-600 text-xs rounded-full px-2 py-0.5">
-                      {connectedUsersCount}
-                    </span>
-                  )}
+                  {status.value === "connected" && <UserCheck size={16} />}
+                  {status.value === "pending" && <Clock size={16} />}
+                  {status.value === "not_connected" && <Users size={16} />}
+                  {status.value === "all" && <Users size={16} />}
+                  {status.label}
+                  <span className={`text-xs rounded-full px-2 py-0.5 ${
+                    connectionStatusFilter === status.value
+                      ? "bg-white text-blue-600"
+                      : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {statusCounts[status.value as keyof typeof statusCounts]}
+                  </span>
                 </button>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <Filter size={18} />
-                  Filters
-                  {(selectedCourses.length > 0 || selectedIndustries.length > 0) && (
-                    <span className="bg-slate-800 text-white text-xs rounded-full px-2 py-0.5">
-                      {selectedCourses.length + selectedIndustries.length}
-                    </span>
-                  )}
-                </button>
-              </div>
+              ))}
             </div>
 
             {showFilters && (
@@ -375,7 +415,7 @@ const FellowsPage = () => {
                   </div>
                 </div>
 
-                {(selectedCourses.length > 0 || selectedIndustries.length > 0 || showOnlyConnections) && (
+                {(selectedCourses.length > 0 || selectedIndustries.length > 0 || connectionStatusFilter !== "all") && (
                   <button
                     onClick={clearFilters}
                     className="text-red-600 hover:text-red-800 text-sm font-medium"
@@ -396,20 +436,17 @@ const FellowsPage = () => {
             </div>
           ) : currentUsers.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {searchTerm || selectedCourses.length > 0 || selectedIndustries.length > 0 || showOnlyConnections
-                ? "No approved fellows match your search criteria"
-                : "No approved fellows found"}
+              {searchTerm || selectedCourses.length > 0 || selectedIndustries.length > 0 || connectionStatusFilter !== "all"
+                ? "No verified fellows match your search criteria"
+                : "No verified fellows found"}
             </div>
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {currentUsers.map(user => (
                   <div key={user.id} className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-3xl p-8 hover:shadow-xl transition-all hover:border-slate-300">
-                    {/* Header with Enrollment Number */}
+                    {/* Header with Profile Image */}
                     <div className="text-center mb-6">
-                      <p className="text-xs font-medium text-gray-500 mb-4">
-                      </p>
-
                       {/* Profile Image */}
                       <div className="relative w-40 h-40 mx-auto mb-4">
                         <div className="w-full h-full rounded-full overflow-hidden border-4 border-blue-100 bg-gradient-to-br from-blue-100 to-blue-50">
@@ -427,14 +464,32 @@ const FellowsPage = () => {
                         </div>
                       </div>
 
-                      {/* Name and Role */}
+                      {/* Name */}
                       <h3 className="text-2xl font-bold text-gray-900 mb-1">
                         {displayValue(user.personalDetails?.fullName)}
                       </h3>
-
                     </div>
 
-                    {/* Graduated Section */}
+                    {/* Industry and Location Section */}
+                    <div className="mb-6 space-y-3">
+                      {/* Industry */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <Briefcase size={16} className="text-blue-600 flex-shrink-0" />
+                        <span className="text-gray-700 font-medium">
+                          {displayValue(user.employmentDetails?.industry)}
+                        </span>
+                      </div>
+
+                      {/* Location */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin size={16} className="text-red-600 flex-shrink-0" />
+                        <span className="text-gray-700">
+                          {displayValue(user.employmentDetails?.location)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Courses Section */}
                     <div className="mb-6 text-left">
                       <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                         <GraduationCap size={16} />
@@ -456,11 +511,9 @@ const FellowsPage = () => {
                       </div>
                     </div>
 
-                   
-
                     {/* Contact Icons */}
-                    <div className="flex justify-center gap-3 mb-6">
-                      {/* Email */}
+                    <div className="flex justify-center gap-3 mb-4">
+                      {/* Email - Always visible */}
                       <a
                         href={`mailto:${user.connectionDetails?.emailAddress}`}
                         className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors"
@@ -469,8 +522,8 @@ const FellowsPage = () => {
                         <Mail size={20} />
                       </a>
 
-                      {/* LinkedIn */}
-                      {user.connectionDetails?.linkedIn && (
+                      {/* LinkedIn - Only visible if connected */}
+                      {isConnected(user.id) && user.connectionDetails?.linkedIn && (
                         <a
                           href={user.connectionDetails.linkedIn}
                           target="_blank"
@@ -482,8 +535,8 @@ const FellowsPage = () => {
                         </a>
                       )}
 
-                      {/* Phone */}
-                      {user.connectionDetails?.contactNumber && (
+                      {/* Phone - Only visible if connected */}
+                      {isConnected(user.id) && user.connectionDetails?.contactNumber && (
                         <a
                           href={`tel:${user.connectionDetails.contactNumber}`}
                           className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white hover:bg-green-600 transition-colors"
@@ -492,7 +545,36 @@ const FellowsPage = () => {
                           <Phone size={20} />
                         </a>
                       )}
+
+                      {/* Locked Icons - Show when not connected */}
+                      {!isConnected(user.id) && (
+                        <>
+                          {user.connectionDetails?.linkedIn && (
+                            <div
+                              className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 cursor-not-allowed"
+                              title="Connect to view LinkedIn"
+                            >
+                              <Linkedin size={20} />
+                            </div>
+                          )}
+                          {user.connectionDetails?.contactNumber && (
+                            <div
+                              className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 cursor-not-allowed"
+                              title="Connect to view phone"
+                            >
+                              <Phone size={20} />
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
+
+                    {/* Connection Status Message */}
+                    {!isConnected(user.id) && (user.connectionDetails?.linkedIn || user.connectionDetails?.contactNumber) && (
+                      <p className="text-xs text-gray-500 text-center mb-4 italic">
+                        Connect to view full contact details
+                      </p>
+                    )}
 
                     {/* Connect Button */}
                     <button
@@ -553,7 +635,7 @@ const FellowsPage = () => {
               )}
 
               <div className="mt-4 text-center text-sm text-gray-600">
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} approved fellows
+                Showing {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} verified fellows
               </div>
             </>
           )}

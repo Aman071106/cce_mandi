@@ -17,9 +17,95 @@ const INDUSTRIES = [
   "Generative AI"
 ];
 
+// Default fallback locations
+const DEFAULT_LOCATIONS = [
+  "Delhi",
+  "Mumbai",
+  "Bangalore",
+  "Hyderabad",
+  "Chennai",
+  "Kolkata",
+  "Pune",
+  "Ahmedabad",
+  "Jaipur",
+  "Lucknow",
+  "Chandigarh",
+  "Gurgaon",
+  "Noida",
+  "Kochi",
+  "Indore",
+  "Bhopal",
+  "Visakhapatnam",
+  "Nagpur",
+  "Surat",
+  "Coimbatore",
+  "Other"
+];
+
+// Function to fetch locations from API
+const fetchIndianCities = async (): Promise<string[]> => {
+  try {
+    const response = await fetch('https://raw.githubusercontent.com/nshntarora/Indian-Cities-JSON/master/cities.json');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Check if data is an array
+    if (Array.isArray(data)) {
+      // Extract city names, remove duplicates, and sort
+      const cityNames = data
+        .map((city: any) => city.name)
+        .filter((name: string | null) => name && name.trim() !== '') // Filter out empty names
+        .filter((name: string, index: number, self: string[]) => self.indexOf(name) === index); // Remove duplicates
+
+      // Add "Other" option and sort alphabetically
+      return [...cityNames.sort(), "Other"];
+    }
+
+    console.warn('API returned non-array data, using default locations');
+    return DEFAULT_LOCATIONS;
+  } catch (error) {
+    console.error('Failed to fetch cities from API:', error);
+    return DEFAULT_LOCATIONS;
+  }
+};
+
+// Alternative backup function using GeoNames API
+const fetchLocationsFromGeonames = async (): Promise<string[]> => {
+  try {
+    // Note: You need to register for a free Geonames account to get a username
+    const response = await fetch('http://api.geonames.org/searchJSON?country=IN&maxRows=100&username=demo&featureClass=P');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.geonames && Array.isArray(data.geonames)) {
+      const cityNames = data.geonames
+        .map((city: any) => city.name)
+        .filter((name: string | null) => name && name.trim() !== '')
+        .filter((name: string, index: number, self: string[]) => self.indexOf(name) === index);
+
+      return [...cityNames.sort(), "Other"];
+    }
+
+    return DEFAULT_LOCATIONS;
+  } catch (error) {
+    console.error('Failed to fetch from Geonames:', error);
+    return DEFAULT_LOCATIONS;
+  }
+};
+
 const ProfileCard = () => {
   const [courses, setCourses] = useState<any[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS); // Initialize with defaults
+  const [loadingLocations, setLoadingLocations] = useState(true);
   const { currentUserID, setCurrentUserID } = useContext(UserContext);
   const router = useRouter();
   const [userData, setUserData] = useState<any>({});
@@ -33,7 +119,19 @@ const ProfileCard = () => {
   const [registrationNumbers, setRegistrationNumbers] = useState<{ [key: string]: string }>({});
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [selectedCourseForRegistration, setSelectedCourseForRegistration] = useState<any>(null);
-
+  const [locationSearch, setLocationSearch] = useState("");
+  const [filteredLocations, setFilteredLocations] = useState<string[]>(locations);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  useEffect(() => {
+    if (locationSearch.trim() === "") {
+      setFilteredLocations(locations);
+    } else {
+      const filtered = locations.filter(loc =>
+        loc.toLowerCase().includes(locationSearch.toLowerCase())
+      );
+      setFilteredLocations(filtered);
+    }
+  }, [locationSearch, locations]);
   useEffect(() => {
     if (!currentUserID) {
       router.push("/");
@@ -55,6 +153,32 @@ const ProfileCard = () => {
       }
     };
     fetchAllCourses();
+  }, []);
+
+  // Add this useEffect to fetch locations
+  useEffect(() => {
+    const loadLocations = async () => {
+      setLoadingLocations(true);
+      try {
+        // Try the primary API first
+        const fetchedLocations = await fetchIndianCities();
+
+        if (fetchedLocations.length > 0) {
+          setLocations(fetchedLocations);
+        } else {
+          // If primary API fails or returns empty, try Geonames as backup
+          const geonamesLocations = await fetchLocationsFromGeonames();
+          setLocations(geonamesLocations);
+        }
+      } catch (error) {
+        console.error('All location APIs failed, using default locations:', error);
+        setLocations(DEFAULT_LOCATIONS);
+      } finally {
+        setLoadingLocations(false);
+      }
+    };
+
+    loadLocations();
   }, []);
 
   const loadUserData = async () => {
@@ -105,32 +229,42 @@ const ProfileCard = () => {
   };
 
   const handleSave = async () => {
-    try {
-      const linkedInUrl = editableData.connectionDetails?.linkedIn;
-      if (linkedInUrl && !linkedInUrl.includes('linkedin.com')) {
-        toast.error("Please enter a valid LinkedIn URL");
-        return;
-      }
+  try {
+    const linkedInUrl = editableData.connectionDetails?.linkedIn;
+    if (linkedInUrl && !linkedInUrl.includes('linkedin.com')) {
+      toast.error("Please enter a valid LinkedIn URL");
+      return;
+    }
 
-      const contactNumber = editableData.connectionDetails?.contactNumber;
-      if (contactNumber && !/^\+?\d{10,15}$/.test(contactNumber.replace(/[\s-]/g, ''))) {
-        toast.error("Please enter a valid contact number");
-        return;
-      }
+    const contactNumber = editableData.connectionDetails?.contactNumber;
+    if (contactNumber && !/^\+?\d{10,15}$/.test(contactNumber.replace(/[\s-]/g, ''))) {
+      toast.error("Please enter a valid contact number");
+      return;
+    }
 
-      await updateUserDoc(currentUserID!, editableData);
-      setUserData(editableData);
-      setIsEditing(false);
-      setActiveSection(null);
-      await loadUserData();
-    } catch (error: any) {
-      if (error.message.includes("15 days")) {
-        toast.error(error.message);
-      } else {
-        toast.error("Failed to update profile");
+    // Only validate location if we're editing employment details
+    if (activeSection === "employmentDetails" && 
+        editableData.employmentDetails?.employmentStatus === "employed") {
+      const selectedLocation = editableData.employmentDetails?.location;
+      if (selectedLocation && !locations.includes(selectedLocation)) {
+        toast.error("Please select a valid location from the dropdown");
+        return;
       }
     }
-  };
+
+    await updateUserDoc(currentUserID!, editableData);
+    setUserData(editableData);
+    setIsEditing(false);
+    setActiveSection(null);
+    await loadUserData();
+  } catch (error: any) {
+    if (error.message.includes("15 days")) {
+      toast.error(error.message);
+    } else {
+      toast.error("Failed to update profile");
+    }
+  }
+};
 
   const handleSubmitForApproval = async () => {
     setIsSubmitting(true);
@@ -232,11 +366,12 @@ const ProfileCard = () => {
     setIsEditing(true);
   };
 
-  const closeEditModal = () => {
-    setIsEditing(false);
-    setActiveSection(null);
-    setEditableData(userData);
-  };
+ const closeEditModal = () => { 
+  setLocationSearch("");
+  setIsEditing(false);
+  setActiveSection(null);
+  setEditableData(userData);
+};
 
   const isProfileComplete = () => {
     const personal = userData.personalDetails || {};
@@ -250,7 +385,7 @@ const ProfileCard = () => {
       connection.linkedIn &&
       connection.linkedIn.includes('linkedin.com') &&
       (employment.employmentStatus === "unemployed" ||
-        (employment.employmentStatus === "employed" && employment.industry && employment.company)) &&
+        (employment.employmentStatus === "employed" && employment.industry && employment.location)) &&
       userData.selectedCourses?.length > 0;
   };
 
@@ -382,7 +517,6 @@ const ProfileCard = () => {
                             ...prev.employmentDetails,
                             employmentStatus: "unemployed",
                             industry: "",
-                            company: "",
                             location: ""
                           }
                         }));
@@ -415,33 +549,57 @@ const ProfileCard = () => {
                         ))}
                       </select>
                     </div>
-                    <div>
+                    <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Company *
+                        Location *
                       </label>
-                      <input
-                        type="text"
-                        value={editableData.employmentDetails?.company || ""}
-                        onChange={(e) =>
-                          handleChange("employmentDetails", "company", e.target.value)
-                        }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Location
-                      </label>
-                      <input
-                        type="text"
-                        value={editableData.employmentDetails?.location || ""}
-                        onChange={(e) =>
-                          handleChange("employmentDetails", "location", e.target.value)
-                        }
-                        placeholder="e.g., Delhi, India"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
-                      />
+
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={locationSearch || editableData.employmentDetails?.location || ""}
+                          onChange={(e) => {
+                            setLocationSearch(e.target.value);
+                            handleChange("employmentDetails", "location", e.target.value);
+                            setShowLocationDropdown(true);
+                          }}
+                          onFocus={() => setShowLocationDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowLocationDropdown(false), 200)}
+                          placeholder="Type to search locations..."
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent pr-10"
+                          required
+                        />
+                        {loadingLocations && (
+                          <div className="absolute right-3 top-2.5">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+                          </div>
+                        )}
+                      </div>
+
+                      {showLocationDropdown && filteredLocations.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredLocations.map((loc, index) => (
+                            <div
+                              key={loc}
+                              onClick={() => {
+                                handleChange("employmentDetails", "location", loc);
+                                setLocationSearch(loc);
+                                setShowLocationDropdown(false);
+                              }}
+                              className={`px-4 py-2 cursor-pointer hover:bg-slate-100 transition-colors ${editableData.employmentDetails?.location === loc ? 'bg-slate-100 font-medium' : ''
+                                } ${index !== filteredLocations.length - 1 ? 'border-b border-gray-100' : ''}`}
+                            >
+                              {loc}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {showLocationDropdown && filteredLocations.length === 0 && locationSearch && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500">
+                          No matching locations found
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -517,8 +675,6 @@ const ProfileCard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-
-
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
           <div className="relative h-40 ">
@@ -577,7 +733,7 @@ const ProfileCard = () => {
                 </div>
                 <p className="text-gray-600">
                   {userData.employmentDetails?.employmentStatus === "employed"
-                    ? `${userData.employmentDetails.company || "Company"} • ${userData.employmentDetails.location || "Location"}`
+                    ? `${userData.employmentDetails.industry || "Industry"} • ${userData.employmentDetails.location || "Location"}`
                     : userData.employmentDetails?.employmentStatus === "unemployed"
                       ? "Unemployed"
                       : "Employment information not provided"}
@@ -595,11 +751,8 @@ const ProfileCard = () => {
                   <Edit3 size={18} />
                   Edit Profile
                 </button>
-
               </div>
             </div>
-
-
 
             {(userData.status === "draft" || userData.status === "rejected") && (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -716,13 +869,7 @@ const ProfileCard = () => {
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500 mb-1">Company {!userData.employmentDetails?.company && <span className="text-red-500">*</span>}</p>
-                        <p className="text-gray-800 font-medium">
-                          {userData.employmentDetails?.company || "Not provided"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Location</p>
+                        <p className="text-sm text-gray-500 mb-1">Location {!userData.employmentDetails?.location && <span className="text-red-500">*</span>}</p>
                         <p className="text-gray-800 font-medium flex items-center gap-1">
                           <MapPin size={16} className="text-gray-500" />
                           {userData.employmentDetails?.location || "Not provided"}
