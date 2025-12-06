@@ -5,6 +5,7 @@ import { fetchAllUsers, fetchCourses, sendConnectionRequest, getConnections, get
 import { UserContext } from "@/context/user-context";
 import toast from "react-hot-toast";
 import { RefreshCw, Search, Mail, Phone, Linkedin, Filter, ChevronLeft, ChevronRight, Check, X, MapPin, GraduationCap, Users } from "lucide-react";
+import { FaUser } from "react-icons/fa";
 
 const INDUSTRIES = [
   "AI and Data Science",
@@ -38,7 +39,7 @@ const FellowsPage = () => {
       setRefreshing(true);
       const users = await fetchAllUsers();
       // Filter out current user and only show approved users
-      const filteredUsers = users.filter(user => 
+      const filteredUsers = users.filter(user =>
         user.id !== currentUserID && user.status === "approved"
       );
       setAllUsers(filteredUsers);
@@ -241,7 +242,6 @@ const FellowsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Fellows</h1>
-            <p className="text-gray-600 mt-1">Connect with approved members ({filteredUsers.length} fellows)</p>
           </div>
           <button
             onClick={() => {
@@ -300,7 +300,7 @@ const FellowsPage = () => {
                 <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by name, email, or company..."
+                  placeholder="Search by name, email, or industry..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
@@ -309,11 +309,10 @@ const FellowsPage = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowOnlyConnections(!showOnlyConnections)}
-                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
-                    showOnlyConnections
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${showOnlyConnections
                       ? "bg-blue-600 text-white border-blue-600"
                       : "border-gray-300 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <Users size={18} />
                   My Connections
@@ -409,21 +408,20 @@ const FellowsPage = () => {
                     {/* Header with Enrollment Number */}
                     <div className="text-center mb-6">
                       <p className="text-xs font-medium text-gray-500 mb-4">
-                        #{displayValue(user.personalDetails?.enrollmentNumber)}
                       </p>
-                      
+
                       {/* Profile Image */}
                       <div className="relative w-40 h-40 mx-auto mb-4">
                         <div className="w-full h-full rounded-full overflow-hidden border-4 border-blue-100 bg-gradient-to-br from-blue-100 to-blue-50">
                           {user.personalDetails?.profileImage ? (
-                            <img 
-                              src={user.personalDetails.profileImage} 
+                            <img
+                              src={user.personalDetails.profileImage}
                               alt={user.personalDetails?.fullName || "User"}
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-blue-400">
-                              {user.personalDetails?.fullName?.charAt(0)?.toUpperCase() || "?"}
+                            <div className="w-full h-full flex items-center justify-center">
+                              <FaUser className="text-blue-400" size={80} />
                             </div>
                           )}
                         </div>
@@ -433,16 +431,14 @@ const FellowsPage = () => {
                       <h3 className="text-2xl font-bold text-gray-900 mb-1">
                         {displayValue(user.personalDetails?.fullName)}
                       </h3>
-                      <p className="text-sm text-gray-600 font-medium mb-1">
-                        CCE Fellow (CCE, IIT Mandi)
-                      </p>
+
                     </div>
 
                     {/* Graduated Section */}
                     <div className="mb-6 text-left">
                       <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                         <GraduationCap size={16} />
-                        Graduated:
+                        Courses:
                       </h4>
                       <div className="space-y-1 pl-6">
                         {user.selectedCourses && user.selectedCourses.length > 0 ? (
@@ -450,7 +446,7 @@ const FellowsPage = () => {
                             const course = courses.find(c => c.id === courseId);
                             return course ? (
                               <p key={courseId} className="text-sm text-gray-700">
-                                Minor in {course.courseName}
+                                {course.courseName}
                               </p>
                             ) : null;
                           })
@@ -460,16 +456,7 @@ const FellowsPage = () => {
                       </div>
                     </div>
 
-                    {/* Location */}
-                    <div className="mb-6 text-left">
-                      <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <MapPin size={16} />
-                        Location:
-                      </h4>
-                      <p className="text-sm text-gray-700 pl-6">
-                        {displayValue(user.employmentDetails?.location)}
-                      </p>
-                    </div>
+                   
 
                     {/* Contact Icons */}
                     <div className="flex justify-center gap-3 mb-6">
@@ -511,13 +498,12 @@ const FellowsPage = () => {
                     <button
                       onClick={() => handleConnect(user.id)}
                       disabled={isConnected(user.id) || hasPendingRequest(user.id)}
-                      className={`w-full py-3 rounded-xl font-semibold transition-all ${
-                        isConnected(user.id)
+                      className={`w-full py-3 rounded-xl font-semibold transition-all ${isConnected(user.id)
                           ? "bg-green-600 text-white cursor-not-allowed"
                           : hasPendingRequest(user.id)
                             ? "bg-amber-500 text-white cursor-not-allowed"
                             : "bg-gradient-to-r from-slate-700 to-slate-900 text-white hover:from-slate-800 hover:to-slate-950 shadow-md hover:shadow-lg"
-                      }`}
+                        }`}
                     >
                       {isConnected(user.id)
                         ? "✓ Connected"
