@@ -44,7 +44,7 @@ const Navbar = () => {
   useEffect(() => {
     const loadNotifications = async () => {
       if (currentUserID) {
-        try { 
+        try {
           const userNotifications = await fetchNotifications(currentUserID);
           setNotifications(userNotifications);
         } catch (error) {
@@ -54,9 +54,9 @@ const Navbar = () => {
     };
 
     loadNotifications();
-    
+
     const interval = setInterval(loadNotifications, 30000);
-    
+
     return () => clearInterval(interval);
   }, [currentUserID]);
 
@@ -70,7 +70,7 @@ const Navbar = () => {
         setUserEmail(user.email);
         setIsAdmin(user.email === adminEmail);
         toast.success("Signed in successfully!");
-        
+
         // Redirect based on approval status
         const userData = await getUserDoc(user.uid);
         if (userData.status === "approved") {
@@ -114,10 +114,10 @@ const Navbar = () => {
 
   const handleNotificationClick = async (notification: any) => {
     await markNotificationAsRead(notification.id);
-    setNotifications(prev => prev.map(notif => 
+    setNotifications(prev => prev.map(notif =>
       notif.id === notification.id ? { ...notif, read: true } : notif
     ));
-    
+
     if (notification.linkId && notification.type === "forum") {
       router.push(`/forum#post-${notification.linkId}`);
     }
@@ -138,18 +138,18 @@ const Navbar = () => {
             <Image
               src={sntcLogo}
               alt="SnTC logo"
-className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
+              className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
             />
           </Link>
-          
+
           <div className="hidden md:flex gap-6 items-center text-xl font-medium text-slate-700">
             <Link href="/" className={`transition-colors pb-1 ${isActiveLink("/")}`}>
               Home
             </Link>
-            
+
             {currentUserID && (
               <>
-                
+
                 <Link href="/fellows" className={`transition-colors pb-1 ${isActiveLink("/fellows")}`}>
                   Fellows
                 </Link>
@@ -194,7 +194,7 @@ className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
                         </button>
                       )}
                     </div>
-                    
+
                     {notifications.length === 0 ? (
                       <div className="p-4 text-center text-gray-500">
                         No notifications
@@ -205,9 +205,8 @@ className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
                           <div
                             key={notification.id}
                             onClick={() => handleNotificationClick(notification)}
-                            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                              !notification.read ? 'bg-blue-50' : ''
-                            }`}
+                            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50' : ''
+                              }`}
                           >
                             <div className="flex items-start gap-3">
                               <MessageSquare size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
@@ -250,7 +249,7 @@ className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
                   </button>
                 </Link>
               )}
-              
+
               {/* Admin Dashboard */}
               {isAdmin && (
                 <Link href="/dashboardAdmin">
@@ -259,7 +258,7 @@ className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
                   </button>
                 </Link>
               )}
-              
+
               {/* Logout Button - RED */}
               <button
                 onClick={logoutUser}
@@ -301,7 +300,7 @@ className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
               )}
             </>
           )}
-          
+
           <button
             onClick={() => setToggle(!toggle)}
             className="p-2 rounded-md text-slate-700 hover:bg-slate-100 transition-colors"
@@ -315,73 +314,73 @@ className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
       <div
         className={`${toggle ? "flex" : "hidden"} md:hidden bg-white w-full p-5 flex-col gap-4 text-base font-medium border-b border-gray-200 shadow-sm`}
       >
-        <Link 
-          href="/" 
+        <Link
+          href="/"
           className={`py-2 transition-colors ${isActiveLink("/")}`}
           onClick={() => setToggle(false)}
         >
           Home
         </Link>
-        
-        
-        
+
+
+
         {currentUserID && (
           <>
-           <Link 
-              href="/fellows" 
+            <Link
+              href="/fellows"
               className={`py-2 transition-colors ${isActiveLink("/fellows")}`}
               onClick={() => setToggle(false)}
             >
               Fellows
             </Link>
-            <Link 
-              href="/forum" 
+            <Link
+              href="/forum"
               className={`py-2 transition-colors ${isActiveLink("/forum")}`}
               onClick={() => setToggle(false)}
             >
               Forum
             </Link>
-            
-           
-            
-            <Link 
-              href="/profile" 
+
+
+
+            <Link
+              href="/profile"
               className={`py-2 transition-colors ${isActiveLink("/profile")}`}
               onClick={() => setToggle(false)}
             >
               Profile
             </Link>
-            
+
             {isAdmin && (
-              <Link 
-                href="/dashboardAdmin" 
+              <Link
+                href="/dashboardAdmin"
                 className={`py-2 transition-colors ${isActiveLink("/dashboard")}`}
                 onClick={() => setToggle(false)}
               >
                 Dashboard
               </Link>
             )}
-            
-           
+
+
           </>
         )}
-        <Link 
-          href="/contact" 
+        <Link
+          href="/contact"
           className={`py-2 transition-colors ${isActiveLink("/contact")}`}
           onClick={() => setToggle(false)}
         >
           Contact
         </Link>
-        {currentUserID &&(
-           <button
-              onClick={async () => {
-                await logoutUser();
-                setToggle(false);
-              }}
-              className="text-left py-2 text-red-600 hover:text-red-800 transition-colors flex items-center gap-2 font-medium"
-            >
-              Logout
-            </button>)}
+        {currentUserID && (
+          <button
+            onClick={async () => {
+              await logoutUser();
+              setToggle(false);
+            }}
+            className="text-left py-2 text-red-600 hover:text-red-800 transition-colors flex items-center gap-2 font-medium"
+          >
+            Logout
+          </button>)}
         {!currentUserID && (
           <button
             onClick={async () => {
@@ -410,7 +409,7 @@ className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
                 </button>
               )}
             </div>
-            
+
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 No notifications
@@ -421,9 +420,8 @@ className="h-10 xs:h-12 sm:h-14 md:h-16 lg:h-20 w-auto object-contain"
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      !notification.read ? 'bg-blue-50' : ''
-                    }`}
+                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50' : ''
+                      }`}
                   >
                     <div className="flex items-start gap-3">
                       <MessageSquare size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
