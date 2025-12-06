@@ -349,7 +349,7 @@ const FellowsPage = () => {
               </button>
             </div>
 
-            {/* Connection Status Filter Pills */}
+            {/* Connection Status Filter Pills
             <div className="flex flex-wrap gap-2">
               {CONNECTION_STATUSES.map(status => (
                 <button
@@ -375,7 +375,7 @@ const FellowsPage = () => {
                   </span>
                 </button>
               ))}
-            </div>
+            </div> */}
 
             {showFilters && (
               <div className="border-t border-gray-200 pt-4 space-y-4">

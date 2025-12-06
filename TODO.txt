@@ -1,2 +1,0 @@
-TODO:
- Automate process of retrieving mailing list on Firebase
