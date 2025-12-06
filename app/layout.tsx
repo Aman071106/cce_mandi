@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
-import { Jost } from "next/font/google";
+import { Roboto } from "next/font/google";
 import "./globals.scss";
 import Navbar from "@/components/nav/navbar";
 import Footer from "@/components/footer/footer";
 import UserProvider from "@/context/user-context";
 import { Toaster } from "react-hot-toast";
 
-const jost = Jost({ subsets: ["latin"] });
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["100", "300", "400", "500", "700", "900"],
+  variable: "--font-roboto",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ccemandi.netlify.app/"),
@@ -23,7 +27,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={jost.className}>
+      <body className={roboto.variable}>
         {/*  Keep Toaster outside of context/provider */}
         <Toaster
           position="top-center"

@@ -12,10 +12,10 @@ import { setUserCookie } from "@/lib/server-actions";
 
 const styles = {
   boxWidth: "xl:max-w-[1280px] w-full",
-  heading1: "font-mono font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white leading-tight sm:leading-snug",
-  heading2: "font-mono font-semibold text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white leading-snug",
-  heading3: "font-mono font-medium text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white leading-snug",
-  paragraph: "font-mono font-bold text-gray-300 text-base sm:text-lg md:text-xl leading-6 sm:leading-8",
+  heading1: "font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white leading-tight sm:leading-snug",
+  heading2: "font-semibold text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white leading-snug",
+  heading3: "font-medium text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white leading-snug",
+  paragraph: "font-bold text-gray-300 text-base sm:text-lg md:text-xl leading-6 sm:leading-8",
 
   flexCenter: "flex justify-center items-center",
   flexStart: "flex justify-center items-start",
@@ -76,15 +76,23 @@ const HomeHeader: React.FC = () => {
         <div className="relative z-10 flex flex-col items-start sm:items-start px-6 sm:px-16 max-w-6xl w-full">
           <div className="w-full flex justify-start py-[6px] px-0 bg-discount-gradient rounded-[10px] mb-6">
             <p className={`${styles.heading1} text-white font-semibold`}>
-              CCE Fellows Network IIT Mandi
+              CCE Fellow Network
             </p>
+
           </div>
+          <div className="w-full flex justify-start py-[6px] px-0 bg-discount-gradient rounded-[10px] mb-6">
+            <p className={`${styles.heading1} text-white font-semibold`}>
+              IIT Mandi
+            </p>
+
+          </div>
+
 
           <div className="flex flex-row justify-between items-center w-full">
             <div className="flex flex-col">
               <h1 className={`${styles.heading2} mb-4`}>
-                Bridging <br className="sm:block hidden" />
-                <span className="text-gradient">Academia & Industry</span>
+
+                <span className="text-gradient">Bridging Academia & Industry</span>
               </h1>
             </div>
           </div>

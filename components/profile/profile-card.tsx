@@ -167,7 +167,7 @@ const ProfileCard = () => {
 
   const handleConfirmRegistration = async () => {
     if (!selectedCourseForRegistration) return;
-    
+
     const regNumber = registrationNumbers[selectedCourseForRegistration.id];
     if (!regNumber || regNumber.trim() === '') {
       toast.error("Please enter a registration number");
@@ -599,7 +599,7 @@ const ProfileCard = () => {
               </div>
             </div>
 
-           
+
 
             {(userData.status === "draft" || userData.status === "rejected") && (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -819,7 +819,7 @@ const ProfileCard = () => {
                             <p className="font-medium text-gray-800">{course.courseName}</p>
                             <p className="text-sm text-gray-500">{course.id}</p>
                             {isRegistered && courseRegistration.registrationNumber && (
-                              <p className="text-xs text-green-700 mt-1 font-mono bg-green-50 inline-block px-2 py-1 rounded">
+                              <p className="text-xs text-green-700 mt-1 bg-green-50 inline-block px-2 py-1 rounded">
                                 Reg. No: {courseRegistration.registrationNumber}
                               </p>
                             )}
@@ -866,7 +866,7 @@ const ProfileCard = () => {
               <h3 className="text-xl font-bold text-gray-900 mb-4">
                 Register for {selectedCourseForRegistration.courseName}
               </h3>
-              
+
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Enter Registration Number *

@@ -13,7 +13,7 @@ const LoginButton: React.FC<LoginButtonProps> = ({ onClick, children }) => {
       className="
         bg-white
         text-black 
-        text-lg font-mono font-bold
+        text-lg font-bold
         py-4 px-8
         rounded-full
         shadow-lg shadow-gray-300

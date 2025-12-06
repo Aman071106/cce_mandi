@@ -10,9 +10,7 @@ const Footer = () => {
       {/* Left Section */}
       <div className="bg-gray-50 w-full md:w-1/3 p-12 flex flex-col items-center md:items-start">
         <Image src={sntcLogo} alt="sntc logo" width={180} className="mb-4" />
-        <div className="text-xl md:text-2xl text-gray-900 font-semibold">
-          Presented by IIT Mandi
-        </div>
+
         <div className="text-gray-600 text-center md:text-left mt-2">
           Empowering education through innovation and research.
         </div>
