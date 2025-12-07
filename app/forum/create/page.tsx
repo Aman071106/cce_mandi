@@ -23,7 +23,7 @@ const CreatePostPage = () => {
       if (currentUserID) {
         try {
           const userData = await getUserDoc(currentUserID);
-          const adminEmail = "aman07112006@gmail.com";
+          const adminEmail = "cce19112025@gmail.com";
           if (userData.connectionDetails?.emailAddress === adminEmail) {
             setIsAdmin(true);
           } else {

@@ -12,7 +12,7 @@ import { createUserDoc, getUserDoc, fetchNotifications, markAllNotificationsAsRe
 import toast from "react-hot-toast";
 import { setUserCookie } from "@/lib/server-actions";
 
-const adminEmail = "aman07112006@gmail.com";
+const adminEmail = "cce19112025@gmail.com";
 
 const Navbar = () => {
   const [toggle, setToggle] = useState(false);

@@ -54,7 +54,7 @@ const AdminDashboard = () => {
   const [selectAllUsers, setSelectAllUsers] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const adminEmail = "aman07112006@gmail.com";
+  const adminEmail = "cce19112025@gmail.com";
 
   const loadUsers = async () => {
     try {
