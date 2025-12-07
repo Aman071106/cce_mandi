@@ -458,7 +458,7 @@ const FellowsPage = () => {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <FaUser className="text-blue-400" size={80} />
+                              <FaUser size={80} color="#60a5fa" />
                             </div>
                           )}
                         </div>
@@ -468,6 +468,19 @@ const FellowsPage = () => {
                       <h3 className="text-2xl font-bold text-gray-900 mb-1">
                         {displayValue(user.personalDetails?.fullName)}
                       </h3>
+                      
+                      {/* Employment Status Badge */}
+                      <div className="flex justify-center mt-2">
+                        {user.employmentDetails?.employmentStatus === "employed" ? (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 border border-green-200 text-xs font-semibold">
+                            ✓ Employed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200 text-xs font-semibold">
+                            Unemployed
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Industry and Location Section */}
