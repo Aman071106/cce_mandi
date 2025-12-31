@@ -54,13 +54,13 @@ const AdminDashboard = () => {
   const [selectAllUsers, setSelectAllUsers] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const adminEmail = "cce19112025@gmail.com";
+  const adminEmails = ["cce19112025@gmail.com", "aakashgautam@iitmandi.ac.in", "cceoffice@iitmandi.ac.in"];
 
   const loadUsers = async () => {
     try {
       setRefreshing(true);
       const users = await fetchPendingUsers();
-      const filteredUsers = users.filter(user => user.connectionDetails?.emailAddress !== adminEmail);
+      const filteredUsers = users.filter(user => !adminEmails.includes(user.connectionDetails?.emailAddress));
       setPendingUsers(filteredUsers);
     } catch (e) {
       toast.error("Failed to fetch users");
@@ -75,7 +75,7 @@ const AdminDashboard = () => {
     try {
       const users = await fetchAllUsersForAdmin();
       // Filter out admin user
-      const filteredUsers = users.filter(user => user.connectionDetails?.emailAddress !== adminEmail);
+      const filteredUsers = users.filter(user => !adminEmails.includes(user.connectionDetails?.emailAddress));
       setAllUsers(filteredUsers);
     } catch (error) {
       console.error("Error loading all users:", error);

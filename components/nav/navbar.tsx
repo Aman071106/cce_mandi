@@ -13,7 +13,7 @@ import { createUserDoc, getUserDoc, fetchNotifications, markAllNotificationsAsRe
 import toast from "react-hot-toast";
 import { setUserCookie } from "@/lib/server-actions";
 
-const adminEmail = "cce19112025@gmail.com";
+const adminEmails = ["cce19112025@gmail.com", "aakashgautam@iitmandi.ac.in", "cceoffice@iitmandi.ac.in"];
 
 const Navbar = () => {
   const [toggle, setToggle] = useState(false);
@@ -32,7 +32,7 @@ const Navbar = () => {
           const userData = await getUserDoc(currentUserID);
           const email = userData.connectionDetails?.emailAddress;
           setUserEmail(email);
-          setIsAdmin(email === adminEmail);
+          setIsAdmin(adminEmails.includes(email));
         } catch (error) {
           console.error("Error fetching user data:", error);
         }
@@ -69,7 +69,7 @@ const Navbar = () => {
         await createUserDoc(user);
         await setUserCookie(user.uid);
         setUserEmail(user.email);
-        setIsAdmin(user.email === adminEmail);
+        setIsAdmin(adminEmails.includes(user.email));
         toast.success("Signed in successfully!");
 
         // Redirect based on approval status

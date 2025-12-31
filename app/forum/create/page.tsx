@@ -23,8 +23,9 @@ const CreatePostPage = () => {
       if (currentUserID) {
         try {
           const userData = await getUserDoc(currentUserID);
-          const adminEmail = "cce19112025@gmail.com";
-          if (userData.connectionDetails?.emailAddress === adminEmail) {
+          const adminEmails = ["cce19112025@gmail.com", "aakashgautam@iitmandi.ac.in", "cceoffice@iitmandi.ac.in"];
+          const userEmail = userData.connectionDetails?.emailAddress;
+          if (userEmail && adminEmails.includes(userEmail)) {
             setIsAdmin(true);
           } else {
             toast.error("Only admin can create posts");
@@ -60,7 +61,7 @@ const CreatePostPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!currentUserID) {
       toast.error("Please login to create a post");
       return;
@@ -107,7 +108,7 @@ const CreatePostPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 py-12 mt-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        <Link 
+        <Link
           href="/forum"
           className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 mb-6 transition-colors"
         >
