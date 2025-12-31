@@ -211,7 +211,7 @@ const ProfileCard = () => {
       await updateUserProfilePicture(currentUserID!, imageUrl);
       await loadUserData();
     } catch (error) {
-      console.error('Error uploading image:', error);
+      // console.error('Error uploading image:', error);
       toast.error('Failed to upload image - (5 MB limit)');
     } finally {
       setUploadingImage(false);
@@ -638,7 +638,7 @@ const ProfileCard = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address
+                    Email Address (Use personal email! )
                   </label>
                   <div className="flex items-center px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600">
                     <Mail size={18} className="mr-2" />

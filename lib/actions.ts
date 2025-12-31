@@ -20,7 +20,7 @@ const generateEnrollmentNumber = async (): Promise<string> => {
       }
     });
   } catch (error) {
-    console.error("Error generating enrollment number:", error);
+    // console.error("Error generating enrollment number:", error);
     // Fallback: use timestamp
     enrollmentNumber = `CF${Date.now().toString().slice(-6)}`;
   }
@@ -64,7 +64,7 @@ export const createUserDoc = async (userDoc: User) => {
       });
     } catch (e) {
       toast.error("Unexpected error creating user. See console.");
-      console.log(e);
+      // console.log(e);
     }
   }
 
@@ -110,7 +110,7 @@ export const updateUserDoc = async (userID: string, data: any, isAdmin: boolean 
       throw e;
     }
     toast.error("Error updating profile");
-    console.log(e);
+    // console.log(e);
   }
 };
 
@@ -144,7 +144,7 @@ export const submitProfileForApproval = async (userID: string) => {
     toast.success("Profile submitted for approval!");
   } catch (e) {
     toast.error("Error submitting profile");
-    console.log(e);
+    // console.log(e);
   }
 };
 
@@ -166,13 +166,13 @@ export const uploadProfilePicture = async (file: File): Promise<string> => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Cloudinary error:', data);
+      // console.error('Cloudinary error:', data);
       throw new Error(data.error?.message || 'Failed to upload to Cloudinary');
     }
 
     return data.secure_url;
   } catch (error) {
-    console.error('Error uploading image:', error);
+    // console.error('Error uploading image:', error);
     throw error;
   }
 };
@@ -188,7 +188,7 @@ export const updateUserProfilePicture = async (userID: string, imageUrl: string)
     });
     toast.success("Profile picture updated successfully!");
   } catch (error) {
-    console.error("Error updating profile picture:", error);
+    // console.error("Error updating profile picture:", error);
     // toast.error("Failed to update profile picture");
     throw error;
   }
@@ -262,7 +262,7 @@ export const fetchPendingUsers = async () => {
     console.log(`Found ${pendingUsers.length} pending users`);
     return pendingUsers;
   } catch (error) {
-    console.error("Error fetching pending users:", error);
+    // console.error("Error fetching pending users:", error);
     toast.error("Failed to fetch pending users");
     return [];
   }
@@ -398,7 +398,7 @@ export const deleteCourse = async (courseId: string) => {
     await deleteDoc(doc(db, "courses", courseId));
     return true;
   } catch (error) {
-    console.error("Error deleting course:", error);
+    // console.error("Error deleting course:", error);
     throw error;
   }
 };
@@ -419,7 +419,7 @@ export const fetchIndustries = async (): Promise<Industry[]> => {
     });
     return industries.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.error("Error fetching industries:", error);
+    // console.error("Error fetching industries:", error);
     return [];
   }
 };
@@ -436,7 +436,7 @@ export const addIndustry = async (name: string) => {
     await addDoc(industriesCol, { name });
     return true;
   } catch (error) {
-    console.error("Error adding industry:", error);
+    // console.error("Error adding industry:", error);
     throw error;
   }
 };
@@ -446,7 +446,7 @@ export const deleteIndustry = async (id: string) => {
     await deleteDoc(doc(db, "industries", id));
     return true;
   } catch (error) {
-    console.error("Error deleting industry:", error);
+    // console.error("Error deleting industry:", error);
     throw error;
   }
 };
@@ -526,7 +526,7 @@ export const createForumPost = async (title: string, content: string, relevantLi
 
     return docRef.id;
   } catch (e) {
-    console.log(e);
+    // console.log(e);
     throw e;
   }
 };
@@ -585,7 +585,7 @@ export const createNotification = async (title: string, message: string, type: "
 
     await addDoc(notificationsRef, notificationData);
   } catch (e) {
-    console.error("Error creating notification:", e);
+    // console.error("Error creating notification:", e);
   }
 };
 
@@ -624,7 +624,7 @@ export const fetchNotifications = async (userId: string): Promise<Notification[]
     });
 
   } catch (error) {
-    console.error("Error fetching notifications:", error);
+    // console.error("Error fetching notifications:", error);
     // Fallback
     const allSnapshot = await getDocs(notificationsRef);
     allSnapshot.forEach(docSnap => {
@@ -661,7 +661,7 @@ export const markNotificationAsRead = async (notificationId: string) => {
       read: true
     });
   } catch (e) {
-    console.error("Error marking notification as read:", e);
+    // console.error("Error marking notification as read:", e);
   }
 };
 
@@ -684,12 +684,12 @@ export const markAllNotificationsAsRead = async (userId: string) => {
 
     await Promise.all(updatePromises);
   } catch (e) {
-    console.error("Error marking all notifications as read:", e);
+    // console.error("Error marking all notifications as read:", e);
   }
 };
 export const superDeleteUser = async (userID: string): Promise<boolean> => {
   try {
-    console.log(`Starting super delete for user: ${userID}`);
+    // console.log(`Starting super delete for user: ${userID}`);
 
     // Get user data first to use for cleanup
     const userData = await getUserDoc(userID);
@@ -795,7 +795,7 @@ export const superDeleteUser = async (userID: string): Promise<boolean> => {
     return true;
 
   } catch (error) {
-    console.error("Error during super delete:", error);
+    // console.error("Error during super delete:", error);
     toast.error("Failed to delete all user data. Please try again.");
     return false;
   }
