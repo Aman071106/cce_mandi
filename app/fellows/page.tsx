@@ -45,11 +45,12 @@ const FellowsPage = () => {
     try {
       setRefreshing(true);
       const users = await fetchAllUsers();
-      // Only show approved/verified users, excluding the current user
-      // fetchAllUsers already filters for approved users, but we double-check here
+      // Show all users excluding the current user and admins
+      const adminEmails = ["cce19112025@gmail.com", "aakashgautam@iitmandi.ac.in", "cceoffice@iitmandi.ac.in"];
       const verifiedUsers = users.filter(user =>
         user.id !== currentUserID &&
-        user.status === "approved"
+        user.status === "approved" &&
+        !adminEmails.includes(user.connectionDetails?.emailAddress || user.email)
       );
       setAllUsers(verifiedUsers);
       setFilteredUsers(verifiedUsers);
@@ -270,7 +271,7 @@ const FellowsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Fellows</h1>
-            <p className="text-sm text-gray-600 mt-1">Connect with verified members of the community</p>
+            <p className="text-sm text-gray-600 mt-1">Connect with  members of the community</p>
           </div>
           <button
             onClick={() => {
@@ -437,8 +438,8 @@ const FellowsPage = () => {
           ) : currentUsers.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               {searchTerm || selectedCourses.length > 0 || selectedIndustries.length > 0 || connectionStatusFilter !== "all"
-                ? "No verified fellows match your search criteria"
-                : "No verified fellows found"}
+                ? "No fellows match your search criteria"
+                : "No fellows found"}
             </div>
           ) : (
             <>
@@ -513,89 +514,59 @@ const FellowsPage = () => {
                       </div>
                     </div>
 
-                    {/* Contact Icons */}
-                    <div className="flex justify-center gap-3 mb-4">
-                      {/* Email - Always visible */}
-                      <a
-                        href={`mailto:${user.connectionDetails?.emailAddress}`}
-                        className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors"
-                        title="Email"
-                      >
-                        <Mail size={20} />
-                      </a>
+                    {/* Contact Info & Connect Section */}
+                    <div className="mt-4">
+                      {isConnected(user.id) ? (
+                        <div className="flex justify-center gap-3">
+                          {/* Email */}
+                          <a
+                            href={`mailto:${user.connectionDetails?.emailAddress}`}
+                            className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors shadow-sm"
+                            title="Email"
+                          >
+                            <Mail size={20} />
+                          </a>
 
-                      {/* LinkedIn - Only visible if connected */}
-                      {isConnected(user.id) && user.connectionDetails?.linkedIn && (
-                        <a
-                          href={user.connectionDetails.linkedIn}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white hover:bg-blue-600 transition-colors"
-                          title="LinkedIn"
-                        >
-                          <Linkedin size={20} />
-                        </a>
-                      )}
-
-                      {/* Phone - Only visible if connected */}
-                      {isConnected(user.id) && user.connectionDetails?.contactNumber && (
-                        <a
-                          href={`tel:${user.connectionDetails.contactNumber}`}
-                          className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white hover:bg-green-600 transition-colors"
-                          title="Phone"
-                        >
-                          <Phone size={20} />
-                        </a>
-                      )}
-
-                      {/* Locked Icons - Show when not connected */}
-                      {!isConnected(user.id) && (
-                        <>
+                          {/* LinkedIn */}
                           {user.connectionDetails?.linkedIn && (
-                            <div
-                              className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 cursor-not-allowed"
-                              title="Connect to view LinkedIn"
+                            <a
+                              href={user.connectionDetails.linkedIn}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white hover:bg-blue-600 transition-colors shadow-sm"
+                              title="LinkedIn"
                             >
                               <Linkedin size={20} />
-                            </div>
+                            </a>
                           )}
+
+                          {/* Phone */}
                           {user.connectionDetails?.contactNumber && (
-                            <div
-                              className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 cursor-not-allowed"
-                              title="Connect to view phone"
+                            <a
+                              href={`tel:${user.connectionDetails.contactNumber}`}
+                              className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white hover:bg-green-600 transition-colors shadow-sm"
+                              title="Phone"
                             >
                               <Phone size={20} />
-                            </div>
+                            </a>
                           )}
-                        </>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleConnect(user.id)}
+                          disabled={hasPendingRequest(user.id)}
+                          className={`w-full py-3 rounded-xl font-semibold transition-all shadow-md ${hasPendingRequest(user.id)
+                            ? "bg-amber-500 text-white cursor-not-allowed"
+                            : "bg-slate-800 text-white hover:bg-slate-900 hover:shadow-lg"
+                            }`}
+                        >
+                          {hasPendingRequest(user.id)
+                            ? "⏳ Request Sent"
+                            : "Connect"
+                          }
+                        </button>
                       )}
                     </div>
-
-                    {/* Connection Status Message */}
-                    {!isConnected(user.id) && (user.connectionDetails?.linkedIn || user.connectionDetails?.contactNumber) && (
-                      <p className="text-xs text-gray-500 text-center mb-4 italic">
-                        Connect to view full contact details
-                      </p>
-                    )}
-
-                    {/* Connect Button */}
-                    <button
-                      onClick={() => handleConnect(user.id)}
-                      disabled={isConnected(user.id) || hasPendingRequest(user.id)}
-                      className={`w-full py-3 rounded-xl font-semibold transition-all ${isConnected(user.id)
-                        ? "bg-green-600 text-white cursor-not-allowed"
-                        : hasPendingRequest(user.id)
-                          ? "bg-amber-500 text-white cursor-not-allowed"
-                          : "bg-gradient-to-r from-slate-700 to-slate-900 text-white hover:from-slate-800 hover:to-slate-950 shadow-md hover:shadow-lg"
-                        }`}
-                    >
-                      {isConnected(user.id)
-                        ? "✓ Connected"
-                        : hasPendingRequest(user.id)
-                          ? "⏳ Request Sent"
-                          : "Connect"
-                      }
-                    </button>
                   </div>
                 ))}
               </div>
@@ -636,9 +607,7 @@ const FellowsPage = () => {
                 </div>
               )}
 
-              <div className="mt-4 text-center text-sm text-gray-600">
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} verified fellows
-              </div>
+
             </>
           )}
         </div>

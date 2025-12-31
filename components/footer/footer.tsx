@@ -15,7 +15,7 @@ const Footer = () => {
             src={sntcLogo}
             alt="sntc logo"
             width={180}
-            className="border-2 border-[#001F5B] rounded-full p-1 max-w-[180px] h-auto object-contain"
+            className="border-[1.8px] border-[#001F5B] rounded-full p-1 max-w-[180px] h-auto object-contain"
           />
         </Link>
 
