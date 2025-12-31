@@ -73,31 +73,26 @@ const HomeHeader: React.FC = () => {
         </div>
 
         {/* Content Container */}
-        <div className="relative z-10 flex flex-col items-start sm:items-start px-6 sm:px-16 max-w-6xl w-full">
-          <div className="w-full flex justify-start py-[6px] px-0 bg-discount-gradient rounded-[10px] mb-6">
-            <p className={`${styles.heading1} text-white font-semibold`}>
+        <div className="relative z-10 flex flex-col items-center justify-center px-6 sm:px-16 max-w-6xl w-full text-center">
+          <div className="w-full flex flex-col items-center justify-center py-[6px] px-0 bg-discount-gradient rounded-[10px] mb-2">
+            <h1 className={`${styles.heading1} font-oswald text-white font-bold tracking-wide uppercase`}>
               CCE Fellow Network
-            </p>
-
-          </div>
-          <div className="w-full flex justify-start py-[6px] px-0 bg-discount-gradient rounded-[10px] mb-6">
-            <p className={`${styles.heading1} text-white font-semibold`}>
+            </h1>
+            <h2 className={`${styles.heading1} font-oswald text-white font-bold tracking-wide uppercase mt-2`}>
               IIT Mandi
-            </p>
-
+            </h2>
           </div>
 
 
-          <div className="flex flex-row justify-between items-center w-full">
-            <div className="flex flex-col">
-              <h1 className={`${styles.heading2} mb-4`}>
-
+          <div className="flex flex-row justify-center items-center w-full mt-4">
+            <div className="flex flex-col items-center">
+              <h3 className={`${styles.heading3} mb-4 font-normal tracking-wider`}>
                 <span className="text-gradient">Bridging Academia & Industry</span>
-              </h1>
+              </h3>
             </div>
           </div>
 
-          <p className={`${styles.paragraph} max-w-[650px] mt-6 mb-10`}>
+          <p className={`${styles.paragraph} max-w-[800px] mt-6 mb-10 text-center mx-auto`}>
             The Center of Continuing Education at IIT Mandi is dedicated to fostering continuous professional development,
             knowledge exchange, and industry -academia collaboration through cutting-edge programs and workshops.
           </p>

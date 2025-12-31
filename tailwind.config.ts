@@ -9,7 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-roboto)"],
+        sans: ["var(--font-outfit)"],
+        oswald: ["var(--font-oswald)"],
       },
     },
   },

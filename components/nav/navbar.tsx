@@ -3,6 +3,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import Image from "next/image";
 import sntcLogo from "@/public/sntc.png";
+import cceLogo from "@/public/cce-logo.svg";
 import { Menu, X, User, Bell, Plus, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";

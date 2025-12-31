@@ -1,23 +1,32 @@
 import type { Metadata } from "next";
-import { Roboto } from "next/font/google";
+import { Outfit, Oswald } from "next/font/google";
 import "./globals.scss";
 import Navbar from "@/components/nav/navbar";
 import Footer from "@/components/footer/footer";
 import UserProvider from "@/context/user-context";
 import { Toaster } from "react-hot-toast";
 
-const roboto = Roboto({
+const outfit = Outfit({
   subsets: ["latin"],
   weight: ["100", "300", "400", "500", "700", "900"],
-  variable: "--font-roboto",
+  variable: "--font-outfit",
+});
+
+const oswald = Oswald({
+  subsets: ["latin"],
+  variable: "--font-oswald",
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ccemandi.netlify.app/"),
-  title: "CCE IIT Mandi",
+  title: "CCE Fellows Network",
   description:
     "A portal for cce fellows",
-
+  icons: {
+    icon: "/sntc.png",
+    shortcut: "/sntc.png",
+    apple: "/sntc.png",
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +36,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={roboto.variable}>
+      <body className={`${outfit.variable} ${oswald.variable} font-sans`}>
         {/*  Keep Toaster outside of context/provider */}
         <Toaster
           position="top-center"
