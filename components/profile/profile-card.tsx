@@ -202,9 +202,9 @@ const ProfileCard = () => {
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB');
+    // Validate file size (max 1MB)
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error('Image size should be less than 1MB');
       return;
     }
 
@@ -229,42 +229,42 @@ const ProfileCard = () => {
   };
 
   const handleSave = async () => {
-  try {
-    const linkedInUrl = editableData.connectionDetails?.linkedIn;
-    if (linkedInUrl && !linkedInUrl.includes('linkedin.com')) {
-      toast.error("Please enter a valid LinkedIn URL");
-      return;
-    }
-
-    const contactNumber = editableData.connectionDetails?.contactNumber;
-    if (contactNumber && !/^\+?\d{10,15}$/.test(contactNumber.replace(/[\s-]/g, ''))) {
-      toast.error("Please enter a valid contact number");
-      return;
-    }
-
-    // Only validate location if we're editing employment details
-    if (activeSection === "employmentDetails" && 
-        editableData.employmentDetails?.employmentStatus === "employed") {
-      const selectedLocation = editableData.employmentDetails?.location;
-      if (selectedLocation && !locations.includes(selectedLocation)) {
-        toast.error("Please select a valid location from the dropdown");
+    try {
+      const linkedInUrl = editableData.connectionDetails?.linkedIn;
+      if (linkedInUrl && !linkedInUrl.includes('linkedin.com')) {
+        toast.error("Please enter a valid LinkedIn URL");
         return;
       }
-    }
 
-    await updateUserDoc(currentUserID!, editableData);
-    setUserData(editableData);
-    setIsEditing(false);
-    setActiveSection(null);
-    await loadUserData();
-  } catch (error: any) {
-    if (error.message.includes("15 days")) {
-      toast.error(error.message);
-    } else {
-      toast.error("Failed to update profile");
+      const contactNumber = editableData.connectionDetails?.contactNumber;
+      if (contactNumber && !/^\+?\d{10,15}$/.test(contactNumber.replace(/[\s-]/g, ''))) {
+        toast.error("Please enter a valid contact number");
+        return;
+      }
+
+      // Only validate location if we're editing employment details
+      if (activeSection === "employmentDetails" &&
+        editableData.employmentDetails?.employmentStatus === "employed") {
+        const selectedLocation = editableData.employmentDetails?.location;
+        if (selectedLocation && !locations.includes(selectedLocation)) {
+          toast.error("Please select a valid location from the dropdown");
+          return;
+        }
+      }
+
+      await updateUserDoc(currentUserID!, editableData);
+      setUserData(editableData);
+      setIsEditing(false);
+      setActiveSection(null);
+      await loadUserData();
+    } catch (error: any) {
+      if (error.message.includes("15 days")) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to update profile");
+      }
     }
-  }
-};
+  };
 
   const handleSubmitForApproval = async () => {
     setIsSubmitting(true);
@@ -366,12 +366,12 @@ const ProfileCard = () => {
     setIsEditing(true);
   };
 
- const closeEditModal = () => { 
-  setLocationSearch("");
-  setIsEditing(false);
-  setActiveSection(null);
-  setEditableData(userData);
-};
+  const closeEditModal = () => {
+    setLocationSearch("");
+    setIsEditing(false);
+    setActiveSection(null);
+    setEditableData(userData);
+  };
 
   const isProfileComplete = () => {
     const personal = userData.personalDetails || {};
