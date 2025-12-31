@@ -164,10 +164,16 @@ export const uploadProfilePicture = async (file: File): Promise<string> => {
     );
 
     const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Cloudinary error:', data);
+      throw new Error(data.error?.message || 'Failed to upload to Cloudinary');
+    }
+
     return data.secure_url;
   } catch (error) {
     console.error('Error uploading image:', error);
-    throw new Error('Failed to upload image');
+    throw error;
   }
 };
 
@@ -183,7 +189,7 @@ export const updateUserProfilePicture = async (userID: string, imageUrl: string)
     toast.success("Profile picture updated successfully!");
   } catch (error) {
     console.error("Error updating profile picture:", error);
-    toast.error("Failed to update profile picture");
+    // toast.error("Failed to update profile picture");
     throw error;
   }
 };
@@ -385,6 +391,66 @@ export const fetchCourses = async () => {
   return courses;
 };
 
+// Delete a course
+export const deleteCourse = async (courseId: string) => {
+  try {
+    // Delete course doc
+    await deleteDoc(doc(db, "courses", courseId));
+    return true;
+  } catch (error) {
+    console.error("Error deleting course:", error);
+    throw error;
+  }
+};
+
+// Industries Management
+export interface Industry {
+  id: string;
+  name: string;
+}
+
+export const fetchIndustries = async (): Promise<Industry[]> => {
+  try {
+    const industriesCol = collection(db, "industries");
+    const snapshot = await getDocs(industriesCol);
+    const industries: Industry[] = [];
+    snapshot.forEach(doc => {
+      industries.push({ id: doc.id, name: doc.data().name });
+    });
+    return industries.sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error("Error fetching industries:", error);
+    return [];
+  }
+};
+
+export const addIndustry = async (name: string) => {
+  try {
+    const industriesCol = collection(db, "industries");
+    // Check if exists
+    const q = query(industriesCol, where("name", "==", name));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      throw new Error("Industry already exists");
+    }
+    await addDoc(industriesCol, { name });
+    return true;
+  } catch (error) {
+    console.error("Error adding industry:", error);
+    throw error;
+  }
+};
+
+export const deleteIndustry = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, "industries", id));
+    return true;
+  } catch (error) {
+    console.error("Error deleting industry:", error);
+    throw error;
+  }
+};
+
 // Fetch approved users (for fellows page)
 export const fetchAllUsers = async () => {
   const usersCol = collection(db, "users");
@@ -531,8 +597,7 @@ export const fetchNotifications = async (userId: string): Promise<Notification[]
   try {
     const userQuery = query(
       notificationsRef,
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc")
+      where("userId", "==", userId)
     );
     const userSnapshot = await getDocs(userQuery);
 
@@ -548,6 +613,14 @@ export const fetchNotifications = async (userId: string): Promise<Notification[]
         linkId: data.linkId,
         createdAt: data.createdAt,
       });
+    });
+
+    // Client-side sort to avoid index requirement
+    userNotifications.sort((a, b) => {
+      // Handle Firestore Timestamp or Date objects or nulls
+      const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt?.getTime ? a.createdAt.getTime() : 0);
+      const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt?.getTime ? b.createdAt.getTime() : 0);
+      return timeB - timeA;
     });
 
   } catch (error) {

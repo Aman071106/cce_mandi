@@ -1,19 +1,13 @@
 "use client";
 
 import React, { useEffect, useState, useContext } from "react";
-import { fetchAllUsers, fetchCourses, sendConnectionRequest, getConnections, getConnectionRequests, acceptConnectionRequest, rejectConnectionRequest } from "@/lib/actions";
+import { fetchAllUsers, fetchCourses, sendConnectionRequest, getConnections, getConnectionRequests, acceptConnectionRequest, rejectConnectionRequest, fetchIndustries, Industry } from "@/lib/actions";
 import { UserContext } from "@/context/user-context";
 import toast from "react-hot-toast";
 import { RefreshCw, Search, Mail, Phone, Linkedin, Filter, ChevronLeft, ChevronRight, Check, X, MapPin, GraduationCap, Users, Briefcase, Clock, UserCheck } from "lucide-react";
 import { FaUser } from "react-icons/fa";
 
-const INDUSTRIES = [
-  "AI and Data Science",
-  "Computer Vision",
-  "NLP",
-  "Machine Learning",
-  "Generative AI"
-];
+
 
 const CONNECTION_STATUSES = [
   { value: "all", label: "All Users" },
@@ -26,6 +20,7 @@ const ITEMS_PER_PAGE = 9; // 3x3 grid for larger cards
 
 const FellowsPage = () => {
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [industries, setIndustries] = useState<Industry[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,6 +40,8 @@ const FellowsPage = () => {
     try {
       setRefreshing(true);
       const users = await fetchAllUsers();
+      const industriesData = await fetchIndustries();
+      setIndustries(industriesData);
       // Show all users excluding the current user and admins
       const adminEmails = ["cce19112025@gmail.com", "aakashgautam@iitmandi.ac.in", "cceoffice@iitmandi.ac.in"];
       const verifiedUsers = users.filter(user =>
@@ -401,18 +398,20 @@ const FellowsPage = () => {
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-2">Filter by Industry</h3>
                   <div className="flex flex-wrap gap-2">
-                    {INDUSTRIES.map(industry => (
-                      <button
-                        key={industry}
-                        onClick={() => handleIndustryFilter(industry)}
-                        className={`px-3 py-1 rounded-full text-sm transition-colors ${selectedIndustries.includes(industry)
-                          ? "bg-slate-800 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          }`}
-                      >
-                        {industry}
-                      </button>
-                    ))}
+                    <div className="flex flex-wrap gap-2">
+                      {industries.map(industry => (
+                        <button
+                          key={industry.id}
+                          onClick={() => handleIndustryFilter(industry.name)}
+                          className={`px-3 py-1 rounded-full text-sm transition-colors ${selectedIndustries.includes(industry.name)
+                            ? "bg-slate-800 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                        >
+                          {industry.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

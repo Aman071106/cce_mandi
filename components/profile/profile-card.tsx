@@ -3,19 +3,13 @@
 import React, { useContext, useEffect, useState, useRef } from "react";
 import { UserContext } from "@/context/user-context";
 import { useRouter } from "next/navigation";
-import { getUserDoc, updateUserDoc, fetchCourses, registerCourse, unregisterCourse, submitProfileForApproval, superDeleteUser, uploadProfilePicture, updateUserProfilePicture } from "@/lib/actions";
+import { getUserDoc, updateUserDoc, fetchCourses, registerCourse, unregisterCourse, submitProfileForApproval, superDeleteUser, uploadProfilePicture, updateUserProfilePicture, fetchIndustries, Industry } from "@/lib/actions";
 import toast from "react-hot-toast";
 import { User, Mail, Phone, Briefcase, MapPin, Linkedin, Edit3, Save, X, Clock, CheckCircle, XCircle, Send, Trash2, AlertTriangle, Camera, Hash } from "lucide-react";
 import Image from "next/image";
 import { signOutUser } from "@/firebase/firebase";
 
-const INDUSTRIES = [
-  "AI and Data Science",
-  "Computer Vision",
-  "NLP",
-  "Machine Learning",
-  "Generative AI"
-];
+
 
 // Default fallback locations
 const DEFAULT_LOCATIONS = [
@@ -103,6 +97,7 @@ const fetchLocationsFromGeonames = async (): Promise<string[]> => {
 
 const ProfileCard = () => {
   const [courses, setCourses] = useState<any[]>([]);
+  const [industries, setIndustries] = useState<Industry[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS); // Initialize with defaults
   const [loadingLocations, setLoadingLocations] = useState(true);
@@ -144,10 +139,12 @@ const ProfileCard = () => {
     const fetchAllCourses = async () => {
       try {
         const allCourses = await fetchCourses();
+        const allIndustries = await fetchIndustries();
         setCourses(allCourses);
+        setIndustries(allIndustries);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to fetch courses");
+        toast.error("Failed to fetch courses or industries");
       } finally {
         setLoadingCourses(false);
       }
@@ -202,9 +199,9 @@ const ProfileCard = () => {
       return;
     }
 
-    // Validate file size (max 1MB)
-    if (file.size > 1 * 1024 * 1024) {
-      toast.error('Image size should be less than 1MB');
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
       return;
     }
 
@@ -215,7 +212,7 @@ const ProfileCard = () => {
       await loadUserData();
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('Failed to upload image');
+      toast.error('Failed to upload image - (5 MB limit)');
     } finally {
       setUploadingImage(false);
     }
@@ -544,8 +541,8 @@ const ProfileCard = () => {
                         required
                       >
                         <option value="">Select Industry</option>
-                        {INDUSTRIES.map(ind => (
-                          <option key={ind} value={ind}>{ind}</option>
+                        {industries.map(ind => (
+                          <option key={ind.id} value={ind.name}>{ind.name}</option>
                         ))}
                       </select>
                     </div>
@@ -581,7 +578,7 @@ const ProfileCard = () => {
                           {filteredLocations.map((loc, index) => (
                             <div
                               key={loc}
-                              onClick={() => {
+                              onMouseDown={() => {
                                 handleChange("employmentDetails", "location", loc);
                                 setLocationSearch(loc);
                                 setShowLocationDropdown(false);
@@ -696,9 +693,13 @@ const ProfileCard = () => {
                   )}
                 </div>
 
-                {/* Camera button for upload */}
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    toast('Max file size: 5MB', {
+                      icon: 'ℹ️',
+                    });
+                    fileInputRef.current?.click();
+                  }}
                   disabled={uploadingImage}
                   className="absolute bottom-0 right-0 bg-slate-800 text-white p-2 rounded-full hover:bg-slate-900 transition-colors shadow-lg disabled:opacity-50"
                   title="Upload profile picture"
@@ -709,6 +710,7 @@ const ProfileCard = () => {
                     <Camera size={20} />
                   )}
                 </button>
+
 
                 {/* Hidden file input */}
                 <input

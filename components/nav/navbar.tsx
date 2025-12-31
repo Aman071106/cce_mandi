@@ -19,6 +19,7 @@ const Navbar = () => {
   const [toggle, setToggle] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userStatus, setUserStatus] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const { currentUserID, setCurrentUserID } = useContext(UserContext);
@@ -32,6 +33,7 @@ const Navbar = () => {
           const userData = await getUserDoc(currentUserID);
           const email = userData.connectionDetails?.emailAddress;
           setUserEmail(email);
+          setUserStatus(userData.status);
           setIsAdmin(adminEmails.includes(email));
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -148,7 +150,7 @@ const Navbar = () => {
               Home
             </Link>
 
-            {currentUserID && (
+            {currentUserID && userStatus === "approved" && (
               <>
 
                 <Link href="/fellows" className={`transition-colors pb-1 ${isActiveLink("/fellows")}`}>
@@ -325,7 +327,7 @@ const Navbar = () => {
 
 
 
-        {currentUserID && (
+        {currentUserID && userStatus === "approved" && (
           <>
             <Link
               href="/fellows"
@@ -341,6 +343,11 @@ const Navbar = () => {
             >
               Forum
             </Link>
+          </>
+        )}
+
+        {currentUserID && (
+          <>
 
 
 

@@ -10,7 +10,11 @@ import {
   addCourse,
   fetchAllUsersForAdmin,
   bulkApproveUsers,
-  bulkRejectUsers
+  bulkRejectUsers,
+  fetchIndustries,
+  addIndustry,
+  deleteIndustry,
+  deleteCourse
 } from "@/lib/actions";
 import toast from "react-hot-toast";
 import {
@@ -29,14 +33,17 @@ import {
   Download,
   CheckSquare,
   Square,
-  Check
+  Check,
+  Briefcase
 } from "lucide-react";
 
 const AdminDashboard = () => {
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
+  const [industries, setIndustries] = useState<any[]>([]);
   const [newCourseCode, setNewCourseCode] = useState("");
   const [newCourseName, setNewCourseName] = useState("");
+  const [newIndustryName, setNewIndustryName] = useState("");
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedUsers, setExpandedUsers] = useState<{ [key: string]: boolean }>({});
@@ -93,10 +100,21 @@ const AdminDashboard = () => {
     }
   };
 
+  const loadIndustries = async () => {
+    try {
+      const industryList = await fetchIndustries();
+      setIndustries(industryList);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to fetch industries");
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     loadUsers();
     loadCourses();
+    loadIndustries();
     loadAllUsers(); // Load all users on mount
   }, []);
 
@@ -365,6 +383,43 @@ const AdminDashboard = () => {
       loadCourses();
     } catch (error) {
       toast.error("Failed to add course");
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!confirm("Are you sure you want to delete this course? This cannot be undone.")) return;
+
+    try {
+      await deleteCourse(courseId);
+      toast.success("Course deleted successfully");
+      loadCourses();
+    } catch (error) {
+      toast.error("Failed to delete course");
+    }
+  };
+
+  const handleAddIndustry = async () => {
+    if (!newIndustryName.trim()) {
+      return toast.error("Please enter industry name");
+    }
+    try {
+      await addIndustry(newIndustryName);
+      setNewIndustryName("");
+      toast.success("Industry added");
+      loadIndustries();
+    } catch (error) {
+      toast.error("Failed to add industry");
+    }
+  };
+
+  const handleDeleteIndustry = async (id: string) => {
+    if (!confirm("Delete this industry?")) return;
+    try {
+      await deleteIndustry(id);
+      toast.success("Industry deleted");
+      loadIndustries();
+    } catch (error) {
+      toast.error("Failed to delete industry");
     }
   };
 
@@ -905,8 +960,15 @@ const AdminDashboard = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {courses.map(course => (
-                  <div key={course.id} className="p-4 bg-slate-50 border border-gray-200 rounded-xl">
-                    <div className="flex justify-between items-start mb-2">
+                  <div key={course.id} className="p-4 bg-slate-50 border border-gray-200 rounded-xl group relative">
+                    <button
+                      onClick={() => handleDeleteCourse(course.id)}
+                      className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Course"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    <div className="flex justify-between items-start mb-2 pr-8">
                       <h4 className="font-semibold text-gray-800">{course.courseName}</h4>
                       <span className="text-sm text-slate-600 bg-slate-200 px-2 py-1 rounded">
                         {course.id}
@@ -924,6 +986,50 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        </div>
+        {/* Manage Industries Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+          <div className="flex items-center gap-3 mb-6">
+            <Briefcase size={24} className="text-purple-600" />
+            <h2 className="text-2xl font-semibold text-gray-800">Manage Industries</h2>
+          </div>
+
+          <div className="flex gap-4 mb-6">
+            <input
+              type="text"
+              placeholder="Industry Name"
+              value={newIndustryName}
+              onChange={(e) => setNewIndustryName(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            <button
+              onClick={handleAddIndustry}
+              className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
+            >
+              <Plus size={20} />
+              Add Industry
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {industries.map((industry) => (
+              <div
+                key={industry.id}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg group hover:border-purple-200 transition-colors"
+              >
+                <span className="text-gray-700 font-medium">{industry.name}</span>
+                <button
+                  onClick={() => handleDeleteIndustry(industry.id)}
+                  className="text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            {industries.length === 0 && (
+              <p className="text-gray-500 text-sm italic">No industries added yet.</p>
             )}
           </div>
         </div>
