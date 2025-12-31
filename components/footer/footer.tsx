@@ -10,7 +10,7 @@ const Footer = () => {
     <div className="w-full flex flex-col md:flex-row gap-0 bg-gray-50 border-t border-gray-200">
       {/* Left Section */}
       <div className="bg-gray-50 w-full md:w-1/3 p-12 flex flex-col items-center md:items-start">
-        <Link href="https://cce.iitmandi.ac.in/index.html" target="_blank" className="mb-4 inline-block">
+        <Link href="https://cce.iitmandi.ac.in/index.html" className="mb-4 inline-block">
           <Image
             src={sntcLogo}
             alt="sntc logo"

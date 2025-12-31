@@ -38,6 +38,10 @@ const Navbar = () => {
         } catch (error) {
           console.error("Error fetching user data:", error);
         }
+      } else {
+        setUserEmail(null);
+        setUserStatus(null);
+        setIsAdmin(false);
       }
     };
 
@@ -74,8 +78,10 @@ const Navbar = () => {
         setIsAdmin(adminEmails.includes(user.email));
         toast.success("Signed in successfully!");
 
-        // Redirect based on approval status
+        // Fetch and set status immediately to update UI without refresh
         const userData = await getUserDoc(user.uid);
+        setUserStatus(userData.status);
+
         if (userData.status === "approved") {
           router.push("/fellows");
         } else {
@@ -84,7 +90,7 @@ const Navbar = () => {
       }
     } catch (e) {
       toast.error("Error signing in. More info in console");
-      console.log(e);
+      // console.log(e);
     }
   };
 
@@ -93,13 +99,14 @@ const Navbar = () => {
       await signOutUser();
       setCurrentUserID(null);
       setUserEmail(null);
+      setUserStatus(null); // Clear status immediately
       setIsAdmin(false);
       setNotifications([]);
       toast.success("Signed out successfully!");
       router.push("/");
     } catch (e) {
       toast.error("Error signing out");
-      console.log(e);
+      // console.log(e);
     }
   };
 
