@@ -1,5 +1,5 @@
 import React from "react";
-import { Mail, Phone, MapPin, Linkedin } from "lucide-react";
+import { Mail, Phone, MapPin, Linkedin, Youtube } from "lucide-react";
 import Link from "next/link";
 
 const ContactPage = () => {
@@ -12,7 +12,7 @@ const ContactPage = () => {
             Contact Us
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl text-center leading-relaxed">
-            Have questions about our programs, workshops, or collaborations?  
+            Have questions about our programs, workshops, or collaborations?
             We're here to help and would love to hear from you.
           </p>
         </div>
@@ -20,7 +20,7 @@ const ContactPage = () => {
 
       {/* Contact Information */}
       <section className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 px-6 py-16">
-        
+
         {/* Address */}
         <div className="bg-white rounded-xl shadow-sm p-8 flex flex-col items-center text-center border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-blue-100">
           <div className="bg-blue-50 p-3 rounded-full mb-4">
@@ -28,8 +28,8 @@ const ContactPage = () => {
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Our Location</h2>
           <p className="text-gray-600 leading-relaxed">
-            Centre for Continuing Education  
-            <br /> North Campus, IIT Mandi  
+            Centre for Continuing Education
+            <br /> North Campus, IIT Mandi
             <br /> Kamand, Mandi, Himachal Pradesh – 175075
           </p>
         </div>
@@ -56,21 +56,31 @@ const ContactPage = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Call Us</h2>
           <p className="text-gray-600 font-medium">
             01905-267742
-			<br></br>
-			01905- 267788
+            <br></br>
+            01905- 267788
           </p>
         </div>
       </section>
 
       {/* Social Section */}
-      <section className="max-w-6xl mx-auto px-6 pb-20 flex justify-center">
+      <section className="max-w-6xl mx-auto px-6 pb-20 flex justify-center gap-4">
         <Link
           href="https://www.linkedin.com/company/cce-iitmandi/"
           target="_blank"
-          className="flex items-center gap-3 px-6 py-3 rounded-lg bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 transition-all duration-300 hover:shadow-md"
+          className="flex items-center justify-center gap-0 md:gap-3 p-3 md:px-6 md:py-3 rounded-full md:rounded-lg bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 transition-all duration-300 hover:shadow-md"
+          title="Follow us on LinkedIn"
         >
-          <Linkedin size={20} />
-          Follow us on LinkedIn
+          <Linkedin size={24} className="md:w-5 md:h-5" />
+          <span className="hidden md:block">Follow us on LinkedIn</span>
+        </Link>
+        <Link
+          href="https://youtube.com/@cce-iitmandi"
+          target="_blank"
+          className="flex items-center justify-center gap-0 md:gap-3 p-3 md:px-6 md:py-3 rounded-full md:rounded-lg bg-red-600 text-white font-medium shadow-sm hover:bg-red-700 transition-all duration-300 hover:shadow-md"
+          title="Subscribe on YouTube"
+        >
+          <Youtube size={24} className="md:w-5 md:h-5" />
+          <span className="hidden md:block">Subscribe on YouTube</span>
         </Link>
       </section>
     </div>
