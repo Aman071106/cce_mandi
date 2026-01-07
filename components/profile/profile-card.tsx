@@ -989,7 +989,7 @@ const ProfileCard = () => {
                   </div>
                 )}
               </div>
-              {/* Super Delete Button at Bottom */}
+              {/* Super Delete Button at Bottom
               <div className="mt-10 flex justify-center md:col-span-2">
                 <button
                   onClick={() => setShowSuperDelete(true)}
@@ -998,7 +998,7 @@ const ProfileCard = () => {
                   <Trash2 size={20} />
                   Super Delete Account
                 </button>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -1018,7 +1018,7 @@ const ProfileCard = () => {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Enter Registration Number *
+                  Enter Registration ID *
                 </label>
                 <input
                   type="text"
@@ -1027,13 +1027,10 @@ const ProfileCard = () => {
                     ...prev,
                     [selectedCourseForRegistration.id]: e.target.value
                   }))}
-                  placeholder="e.g., REG2024001"
+                  placeholder=""
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                   autoFocus
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter your course-specific registration number
-                </p>
               </div>
 
               <div className="flex gap-3">

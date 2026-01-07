@@ -18,8 +18,8 @@ const oswald = Oswald({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ccemandi.netlify.app/"),
-  title: "CCE Fellow",
+  metadataBase: new URL("https://cce.iitmandi.ac.in/ccefellow"),
+  title: "CCE Fellow Network",
   description:
     "A portal for cce fellows",
   icons: {
